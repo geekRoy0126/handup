@@ -15,3 +15,11 @@ export async function registerHost(page: Page, name = "Dana Host"): Promise<stri
   await expect(page).toHaveURL(/\/dashboard$/);
   return email;
 }
+
+/** From /dashboard, creates a session and waits for its host console. Returns the join code. */
+export async function createSessionFromDashboard(page: Page, title: string): Promise<string> {
+  await page.getByLabel("Session title").fill(title);
+  await page.getByRole("button", { name: "Create session" }).click();
+  await expect(page).toHaveURL(/\/host\/[A-Z0-9]{6}$/);
+  return page.url().split("/").pop() ?? "";
+}
