@@ -1,0 +1,184 @@
+// HandUp data model. Source of truth for the database; product rules live in docs/PRD.md §4.
+// Conventions: ids are cuid strings, timestamps are stored in UTC and end in *At.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SessionStatus {
+  LIVE
+  ENDED
+}
+
+enum QuestionStatus {
+  OPEN
+  ANSWERED
+  MERGED
+}
+
+enum PollKind {
+  MULTIPLE_CHOICE
+  CONFIDENCE
+}
+
+enum PollStatus {
+  OPEN
+  CLOSED
+}
+
+/// A host or moderator account. Audience members never have one (they are Guests).
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  hostedSessions Session[]
+  moderating     SessionModerator[]
+  apiKeys        ApiKey[]
+}
+
+/// One live talk or lecture. Audience joins with `code` (PRD §4.1).
+model Session {
+  id        String        @id @default(cuid())
+  code      String        @unique
+  title     String
+  status    SessionStatus @default(LIVE)
+  hostId    String
+  createdAt DateTime      @default(now())
+  endedAt   DateTime?
+
+  host       User               @relation(fields: [hostId], references: [id], onDelete: Cascade)
+  moderators SessionModerator[]
+  guests     Guest[]
+  questions  Question[]
+  polls      Poll[]
+
+  @@index([hostId])
+}
+
+/// A user the host invited to moderate one session (PRD §3).
+model SessionModerator {
+  sessionId String
+  userId    String
+  addedAt   DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, userId])
+}
+
+/// An audience member in one session, identified by a signed guest token. No account, no email.
+model Guest {
+  id          String   @id @default(cuid())
+  sessionId   String
+  displayName String?
+  createdAt   DateTime @default(now())
+
+  session       Session        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  questions     Question[]
+  votes         Vote[]
+  pollResponses PollResponse[]
+
+  @@index([sessionId])
+}
+
+model Question {
+  id           String         @id @default(cuid())
+  sessionId    String
+  authorId     String
+  body         String
+  isAnonymous  Boolean        @default(false)
+  status       QuestionStatus @default(OPEN)
+  isPinned     Boolean        @default(false)
+  isHidden     Boolean        @default(false)
+  mergedIntoId String?
+  createdAt    DateTime       @default(now())
+  answeredAt   DateTime?
+
+  session    Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  author     Guest      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  mergedInto Question?  @relation("Merge", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  merged     Question[] @relation("Merge")
+  votes      Vote[]
+
+  @@index([sessionId, status])
+  @@index([authorId, createdAt])
+}
+
+/// One upvote. A guest votes at most once per question (PRD §4.2).
+model Vote {
+  questionId String
+  guestId    String
+  createdAt  DateTime @default(now())
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  guest    Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+  @@id([questionId, guestId])
+}
+
+model Poll {
+  id        String     @id @default(cuid())
+  sessionId String
+  kind      PollKind
+  prompt    String
+  status    PollStatus @default(OPEN)
+  createdAt DateTime   @default(now())
+  closedAt  DateTime?
+
+  session   Session        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  options   PollOption[]
+  responses PollResponse[]
+
+  @@index([sessionId, status])
+}
+
+model PollOption {
+  id       String @id @default(cuid())
+  pollId   String
+  label    String
+  position Int
+
+  poll      Poll           @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  responses PollResponse[]
+
+  @@unique([pollId, position])
+}
+
+/// One answer per guest per poll; changeable while the poll is open (PRD §4.4).
+model PollResponse {
+  pollId    String
+  guestId   String
+  optionId  String
+  updatedAt DateTime @updatedAt
+
+  poll   Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  guest  Guest      @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  option PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  @@id([pollId, guestId])
+}
+
+/// Key for the public API (PRD §4.6). Only a SHA-256 hash is stored; the raw key is shown once.
+model ApiKey {
+  id         String    @id @default(cuid())
+  ownerId    String
+  name       String
+  prefix     String
+  hash       String    @unique
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+}

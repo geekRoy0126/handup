@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+/*
+  Design tokens (see docs/ui-spec.md). Components use these semantic names, never raw hex values.
+  Tailwind v4 turns each --color-* into utilities: bg-surface, text-ink-muted, bg-status-answered, ...
+  Every text/background pair below was checked at >= 4.5:1 (WCAG AA) in light mode.
+*/
+@theme {
+  --color-brand-50: #eef2ff;
+  --color-brand-500: #4f5bd5;
+  --color-brand-600: #3f48b8; /* white text on it: 7.0:1 */
+  --color-brand-700: #323a96;
+
+  --color-surface: #ffffff;
+  --color-surface-muted: #f5f6f8;
+  --color-ink: #16181d;
+  --color-ink-muted: #565b66;
+  --color-line: #e2e4e9;
+
+  /* Question and poll status */
+  --color-status-open: #3f48b8;
+  --color-status-pinned: #8a4b00; /* 6.0:1 on white */
+  --color-status-answered: #1a7a43; /* 5.4:1 on white */
+  --color-status-hidden: #6b6760; /* 5.6:1 on white */
+  --color-danger: #b42318;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-surface: #121317;
+    --color-surface-muted: #1c1e24;
+    --color-ink: #f1f2f5;
+    --color-ink-muted: #a9adb8;
+    --color-line: #2e313a;
+    --color-brand-50: #1d2045;
+  }
+}
+
+body {
+  background: var(--color-surface);
+  color: var(--color-ink);
+}

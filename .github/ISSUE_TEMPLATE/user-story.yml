@@ -1,0 +1,40 @@
+name: User story
+description: A feature slice from docs/PRD.md §5
+labels: ["feature"]
+body:
+  - type: textarea
+    id: story
+    attributes:
+      label: User story
+      description: "As a …, I want …, so that …"
+    validations:
+      required: true
+  - type: textarea
+    id: ac
+    attributes:
+      label: Acceptance criteria
+      description: One checkbox per testable criterion. Each becomes at least one test.
+      value: |
+        - [ ]
+        - [ ]
+    validations:
+      required: true
+  - type: dropdown
+    id: estimate
+    attributes:
+      label: Estimate (points)
+      options:
+        - "1 (< 2 h)"
+        - "2 (half a day)"
+        - "3 (a day)"
+        - "5 (two days)"
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes for the implementer (human or AI)
+      value: |
+        - Follow AGENTS.md §0 and the TDD order in §3.4.
+        - Product rules: docs/PRD.md §4.x
+        - Branch: feature/<issue-number>-<short-summary>
