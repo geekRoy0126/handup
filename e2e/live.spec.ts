@@ -14,7 +14,7 @@ test("questions and votes appear live for other guests and the host, ranked by v
   await bob.goto(`/join/${code}`);
 
   for (const text of ["First question from Alice", "Second question from Alice"]) {
-    await alice.getByLabel("Your question").fill(text);
+    await alice.getByLabel("Your question", { exact: true }).fill(text);
     await alice.getByRole("button", { name: "Ask" }).click();
     await expect(alice.getByRole("article", { name: text })).toBeVisible();
   }

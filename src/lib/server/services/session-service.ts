@@ -3,6 +3,7 @@ import "server-only";
 import { ApiError } from "@/lib/api/http";
 import { generateJoinCode } from "@/lib/domain/join-code";
 import { db } from "@/lib/server/db";
+import { bumpSessionVersion } from "@/lib/server/realtime";
 import type { CreateSession } from "@/lib/validation/session";
 
 import type { SessionRow, StaffRole } from "./access";
@@ -54,9 +55,8 @@ export async function getSessionDto(session: SessionRow): Promise<SessionDto> {
 
 export async function endSession(session: SessionRow, now: Date): Promise<SessionDto> {
   if (session.status === "ENDED") return getSessionDto(session);
-  return db.session.update({
-    where: { id: session.id },
-    data: { status: "ENDED", endedAt: now },
-    select: dtoSelect,
+  return db.$transaction(async (tx) => {
+    await bumpSessionVersion(tx, session.id);
+    return tx.session.update({ where: { id: session.id }, data: { status: "ENDED", endedAt: now }, select: dtoSelect });
   });
 }

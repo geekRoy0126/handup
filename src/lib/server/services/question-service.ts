@@ -8,7 +8,9 @@ import {
   type QuestionViewer,
   type StaffQuestionView,
 } from "@/lib/domain/question-view";
+import { rankQuestions } from "@/lib/domain/rank-questions";
 import { db } from "@/lib/server/db";
+import { bumpSessionVersion } from "@/lib/server/realtime";
 import type { AskQuestion } from "@/lib/validation/question";
 
 import type { SessionRow } from "./access";
@@ -52,7 +54,8 @@ export async function loadQuestionRecords(sessionId: string): Promise<QuestionRe
 
 export async function listQuestions(session: SessionRow, viewer: QuestionViewer): Promise<(QuestionView | StaffQuestionView)[]> {
   const records = await loadQuestionRecords(session.id);
-  return records.map((r) => toQuestionView(r, viewer)).filter((v): v is QuestionView => v !== null);
+  const views = records.map((r) => toQuestionView(r, viewer)).filter((v): v is QuestionView => v !== null);
+  return rankQuestions(views);
 }
 
 export async function askQuestion(
@@ -69,10 +72,12 @@ export async function askQuestion(
 
   const created = await db.$transaction(async (tx) => {
     if (input.displayName) await tx.guest.update({ where: { id: guestId }, data: { displayName: input.displayName } });
-    return tx.question.create({
+    const question = await tx.question.create({
       data: { sessionId: session.id, authorId: guestId, body: input.body, isAnonymous: input.isAnonymous, createdAt: now },
       select: { id: true },
     });
+    await bumpSessionVersion(tx, session.id);
+    return question;
   });
   const [row] = await loadRecords({ id: created.id });
   const view = row ? toQuestionView(toRecord(row), { role: "GUEST", guestId }) : null;

@@ -11,7 +11,7 @@ test("guest joins with a messy code, asks anonymously, and the host sees it", as
   await joinFromHome(guest, `${code.slice(0, 3).toLowerCase()} ${code.slice(3).toLowerCase()}`);
   await expect(guest.getByRole("heading", { level: 1, name: "Live Q&A test" })).toBeVisible();
 
-  await guest.getByLabel("Your question").fill("Will the slides be posted?");
+  await guest.getByLabel("Your question", { exact: true }).fill("Will the slides be posted?");
   await expect(guest.getByLabel("Ask anonymously")).toBeChecked();
   await guest.getByRole("button", { name: "Ask" }).click();
 

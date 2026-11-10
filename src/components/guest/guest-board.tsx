@@ -6,9 +6,11 @@ import { useEffect, useState } from "react";
 
 import { AskForm } from "@/components/questions/ask-form";
 import { QuestionList } from "@/components/questions/question-list";
+import { VoteButton } from "@/components/questions/vote-button";
 import { ErrorState } from "@/components/ui/error-state";
 import { apiFetch } from "@/lib/client/api-fetch";
 import { useQuestions } from "@/lib/client/use-questions";
+import { useSessionEvents } from "@/lib/client/use-session-events";
 import { useSessionInfo } from "@/lib/client/use-session-info";
 
 type JoinState = { kind: "joining" } | { kind: "joined" } | { kind: "error"; message: string };
@@ -16,8 +18,13 @@ type JoinState = { kind: "joining" } | { kind: "joined" } | { kind: "error"; mes
 export function GuestBoard() {
   const { code } = useParams<{ code: string }>();
   const [join, setJoin] = useState<JoinState>({ kind: "joining" });
-  const { state: info } = useSessionInfo(code);
+  const { state: info, reload: reloadInfo } = useSessionInfo(code);
   const { state, reload } = useQuestions(code, join.kind === "joined");
+  const isEnded = info.kind === "ready" && info.session.status === "ENDED";
+  useSessionEvents(code, join.kind === "joined", () => {
+    reload();
+    reloadInfo();
+  });
 
   useEffect(() => {
     apiFetch(`/api/v1/sessions/${code}/join`, { method: "POST" }).then((result) =>
@@ -34,11 +41,21 @@ export function GuestBoard() {
       {join.kind === "error" && <ErrorState message={join.message} />}
       {join.kind === "joined" && (
         <>
-          <AskForm code={code} onAsked={reload} />
+          {isEnded ? (
+            <p role="status" className="rounded-xl border border-line bg-surface-muted p-4 text-sm">
+              This session has ended. Thanks for taking part!
+            </p>
+          ) : (
+            <AskForm code={code} onAsked={reload} />
+          )}
           {state.kind === "loading" && <div aria-label="Loading questions" className="h-32 animate-pulse rounded-xl bg-surface-muted" />}
           {state.kind === "error" && <ErrorState message={state.message} onRetry={reload} />}
           {state.kind === "ready" && (
-            <QuestionList questions={state.questions} emptyBody="Be the first to ask. You can stay anonymous." />
+            <QuestionList
+              questions={state.questions}
+              emptyBody="Be the first to ask. You can stay anonymous."
+              renderVote={(q) => <VoteButton question={q} disabled={isEnded} onVoted={reload} />}
+            />
           )}
         </>
       )}
