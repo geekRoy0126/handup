@@ -1,6 +1,7 @@
 import "server-only";
 
 import { ApiError } from "@/lib/api/http";
+import { mergeVotes } from "@/lib/domain/merge-votes";
 import { planQuestionAction, type QuestionAction } from "@/lib/domain/question-actions";
 import { db } from "@/lib/server/db";
 import { bumpSessionVersion } from "@/lib/server/realtime";
@@ -32,5 +33,38 @@ export async function applyQuestionAction(question: TargetQuestion, action: Ques
     });
     await bumpSessionVersion(tx, question.session.id);
     return updated;
+  });
+}
+
+/** Merges `sourceId` into `targetId` (PRD US7): moves votes without double counting, marks the source MERGED. */
+export async function mergeQuestion(sessionId: string, sourceId: string, targetId: string) {
+  if (sourceId === targetId) throw new ApiError("CONFLICT", "A question can't be merged into itself.");
+  const select = { id: true, sessionId: true, status: true, authorId: true, votes: { select: { guestId: true } } } as const;
+  const [source, target] = await Promise.all([
+    db.question.findUnique({ where: { id: sourceId }, select }),
+    db.question.findUnique({ where: { id: targetId }, select }),
+  ]);
+  if (!source || !target || target.sessionId !== sessionId || source.sessionId !== sessionId) {
+    throw new ApiError("NOT_FOUND", "No such question in this session.");
+  }
+  if (source.status === "MERGED" || target.status === "MERGED") {
+    throw new ApiError("CONFLICT", "One of these questions was already merged.");
+  }
+
+  const { move } = mergeVotes({
+    sourceVoterIds: source.votes.map((v) => v.guestId),
+    targetVoterIds: target.votes.map((v) => v.guestId),
+    targetAuthorId: target.authorId,
+  });
+
+  return db.$transaction(async (tx) => {
+    await tx.vote.deleteMany({ where: { questionId: source.id } });
+    if (move.length > 0) await tx.vote.createMany({ data: move.map((guestId) => ({ questionId: target.id, guestId })) });
+    await tx.question.update({
+      where: { id: source.id },
+      data: { status: "MERGED", mergedIntoId: target.id, isPinned: false },
+    });
+    await bumpSessionVersion(tx, sessionId);
+    return { mergedId: source.id, targetId: target.id, movedVotes: move.length };
   });
 }

@@ -64,7 +64,14 @@ export function HostConsole() {
                     questions={board.questions}
                     emptyBody="Share the join code. Questions appear here live."
                     renderVote={(q) => <VoteCount votes={q.votes} />}
-                    renderActions={(q) => <StaffActions question={q} onDone={reloadBoard} onError={setActionError} />}
+                    renderActions={(q) => (
+                      <StaffActions
+                        question={q}
+                        mergeTargets={board.questions.filter((t) => t.id !== q.id && t.status === "OPEN")}
+                        onDone={reloadBoard}
+                        onError={setActionError}
+                      />
+                    )}
                   />
                 )}
               </section>
