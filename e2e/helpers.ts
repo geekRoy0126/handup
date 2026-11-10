@@ -23,3 +23,11 @@ export async function createSessionFromDashboard(page: Page, title: string): Pro
   await expect(page).toHaveURL(/\/host\/[A-Z0-9]{6}$/);
   return page.url().split("/").pop() ?? "";
 }
+
+/** Types a join code on the home page and waits for the guest board. */
+export async function joinFromHome(page: Page, typedCode: string): Promise<void> {
+  await page.goto("/");
+  await page.getByLabel("Join code").fill(typedCode);
+  await page.getByRole("button", { name: "Join" }).click();
+  await expect(page).toHaveURL(/\/join\/[A-Z0-9]{6}$/);
+}
