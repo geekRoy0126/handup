@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
@@ -54,6 +55,9 @@ export function HostConsole() {
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="flex-1 text-3xl font-bold">{state.session.title}</h1>
               <StatusTag status={state.session.status} />
+              <Link href={`/host/${state.session.code}/report`} className="text-sm font-medium text-brand-600 underline">
+                View report
+              </Link>
               {state.role === "HOST" && state.session.status === "LIVE" && (
                 <Button variant="danger" onClick={endSession}>
                   End session
