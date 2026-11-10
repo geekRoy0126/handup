@@ -11,7 +11,7 @@ test("host creates an API key and a developer reads the session summary with it"
   await page.getByRole("button", { name: "Create key" }).click();
   const key = (await page.getByLabel("Your new API key").inputValue()).trim();
   expect(key).toMatch(/^hu_[0-9A-Za-z]{32}$/);
-  await expect(page.getByRole("cell", { name: "Discord bot" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Discord bot", exact: true })).toBeVisible();
 
   const res = await request.get(`/api/v1/public/sessions/${code}/summary`, { headers: { "X-API-Key": key } });
   expect(res.status()).toBe(200);
