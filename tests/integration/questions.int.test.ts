@@ -18,9 +18,9 @@ beforeEach(resetDb);
 
 async function joinAs(code: string, cookie?: string) {
   const res = await join(jsonRequest(`/api/v1/sessions/${code}/join`, { method: "POST", cookie }), ctx({ code }));
-  const body = await readJson<{ data: { guest: { id: string } } }>(res);
+  const body = await readJson<{ data?: { guest: { id: string } }; error?: { message: string } }>(res);
   const setCookie = getSetCookie(res, "hu_guest");
-  return { res, guestId: body.data?.guest.id, cookie: setCookie ? cookiePair(setCookie) : cookie };
+  return { res, error: body.error, guestId: body.data?.guest.id, cookie: setCookie ? cookiePair(setCookie) : cookie };
 }
 
 function askAs(code: string, cookie: string | undefined, body: unknown) {
@@ -50,9 +50,9 @@ describe("POST /api/v1/sessions/[code]/join", () => {
   it("answers 409 'This session has ended.' for an ended session", async () => {
     const { code } = await createLiveSession();
     await endSession(await findSessionByCode(code), TEST_NOW);
-    const { res } = await joinAs(code);
+    const { res, error } = await joinAs(code);
     expect(res.status).toBe(409);
-    expect((await readJson(res)).error?.message).toBe("This session has ended.");
+    expect(error?.message).toBe("This session has ended.");
   });
 
   it("answers 404 for an unknown code", async () => {

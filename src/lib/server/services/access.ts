@@ -48,7 +48,7 @@ export async function getViewer(req: Request, session: SessionRow, now: Date): P
 async function denied(req: Request, now: Date, message: string): Promise<never> {
   // Someone signed in (as a user or as a guest) but without the right role gets 403; nobody at all gets 401.
   const isSignedIn = (await getUserId(req, now)) !== null || (await getGuestClaims(req, now)) !== null;
-  if (!isSignedIn) throw new ApiError("UNAUTHENTICATED", "Please log in.");
+  if (!isSignedIn) throw new ApiError("UNAUTHENTICATED", "Join the session or log in first.");
   throw new ApiError("FORBIDDEN", message);
 }
 
@@ -69,4 +69,11 @@ export async function requireGuest(req: Request, session: SessionRow, now: Date)
   if (!guest) throw new ApiError("UNAUTHENTICATED", "Join the session first.");
   if (guest.sessionId !== session.id) throw new ApiError("FORBIDDEN", "That guest pass is for another session.");
   return { guestId: guest.guestId };
+}
+
+/** Host, moderator or a guest of this session; anyone else gets 401 (nobody) or 403 (wrong person). */
+export async function requireParticipant(req: Request, session: SessionRow, now: Date) {
+  const viewer = await getViewer(req, session, now);
+  if (viewer.role !== null) return viewer;
+  return denied(req, now, "You are not part of this session.");
 }
