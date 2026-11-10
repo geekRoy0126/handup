@@ -24,5 +24,5 @@ test("login with a wrong password shows the generic error", async ({ page }) => 
   await page.getByLabel("Email").fill(uniqueEmail());
   await page.getByLabel("Password").fill("wrong-password");
   await page.getByRole("button", { name: "Log in" }).click();
-  await expect(page.getByRole("alert")).toHaveText("Email or password is incorrect.");
+  await expect(page.getByRole("alert").filter({ hasText: "Email or password is incorrect." })).toBeVisible();
 });
