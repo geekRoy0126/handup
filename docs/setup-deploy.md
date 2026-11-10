@@ -37,7 +37,6 @@ Variables (set in Vercel → Project → Settings → Environment Variables, sep
 | --- | --- | --- | --- |
 | `DATABASE_URL` | `.env` | set by Neon integration per branch | set by Neon integration |
 | `JWT_SECRET` | `.env` | its own value | its own value (never reuse) |
-| `PUSHER_APP_ID`, `PUSHER_SECRET`, `NEXT_PUBLIC_PUSHER_KEY`, `NEXT_PUBLIC_PUSHER_CLUSTER` | dev Pusher app | dev Pusher app | prod Pusher app |
 
 ## One-time cloud setup (issue #2)
 
@@ -47,10 +46,9 @@ Variables (set in Vercel → Project → Settings → Environment Variables, sep
    - Build command: `npm run vercel-build` (runs `prisma migrate deploy` then `next build`).
    - Integrations → **Neon** → connect project `handup`, enable "Create a branch for each Preview deployment".
    - Add the environment variables above.
-4. **Pusher** (free Sandbox): create two Channels apps (`handup-dev`, `handup-prod`), copy keys into Vercel.
-5. **Preview E2E:** Vercel → Settings → Deployment Protection → Protection Bypass for Automation → copy the secret
+4. **Preview E2E:** Vercel → Settings → Deployment Protection → Protection Bypass for Automation → copy the secret
    into GitHub → Settings → Secrets → Actions as `VERCEL_AUTOMATION_BYPASS_SECRET`.
-6. After the first green CI run on `main`: `node scripts/setup-github.mjs --protect` (requires partner review +
+5. After the first green CI run on `main`: `node scripts/setup-github.mjs --protect` (requires partner review +
    all CI checks before merge; on a private repo this needs GitHub Pro, which is free with GitHub Education).
 
 ## Release flow

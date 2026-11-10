@@ -22,13 +22,13 @@ Team: **Ruoyu Wang** and **Qingyu Cheng** — CS6983 Project 2.
 | **Guest** (no account) | Join with a code, ask (anonymous by default), upvote, answer polls, see live results |
 | **Developer** | Read session summaries and poll results through the documented public API |
 
-Real time: every change reaches all open screens within ~2 s through Pusher; clients refetch, so hidden questions
+Real time: every change reaches all open screens within ~2 s through Server-Sent Events; clients refetch, so hidden questions
 and anonymous names never travel over the public channel.
 
 ## Tech stack
 
 Next.js 16 (App Router, route handlers) · React 19 · TypeScript · Tailwind CSS 4 · PostgreSQL 16 (Neon) ·
-Prisma 7 · JWT (jose) + bcrypt · Pusher Channels · zod · Vitest + Testing Library · Playwright ·
+Prisma 7 · JWT (jose) + bcrypt · Server-Sent Events · zod · Vitest + Testing Library · Playwright ·
 GitHub Actions · Vercel.
 
 ## Quick start

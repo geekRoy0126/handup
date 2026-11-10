@@ -1,7 +1,7 @@
 # Architecture
 
 HandUp is one Next.js 16 application: React pages and REST route handlers deploy together to Vercel, data lives
-in PostgreSQL (Neon), and Pusher Channels pushes "something changed" events to browsers.
+in PostgreSQL (Neon), and a Server-Sent Events stream tells browsers "something changed" so they refetch.
 
 ## System context
 
@@ -22,7 +22,6 @@ flowchart LR
   end
 
   DB[("PostgreSQL<br/>Neon: branch per preview")]
-  PU["Pusher Channels<br/>session-&lt;CODE&gt;"]
 
   G -- HTTPS --> A
   H -- HTTPS --> P
@@ -32,9 +31,11 @@ flowchart LR
   PUB --> S
   S --> DOM
   S -- Prisma 7 --> DB
-  S -- "notify {at}" --> PU
-  PU -- "questions.changed / poll.changed" --> G
-  PU -- events --> H
+  SSE["SSE route<br/>/api/v1/sessions/:code/events"]
+  S -- "bump Session.version (same transaction)" --> DB
+  SSE -- "poll version every 1 s" --> DB
+  SSE -- "event: changed" --> G
+  SSE -- "event: changed" --> H
 ```
 
 ## Real-time update (upvote example)
@@ -45,15 +46,15 @@ sequenceDiagram
   participant API as POST /api/v1/questions/:id/vote
   participant SVC as question-service
   participant DB as Postgres
-  participant PU as Pusher
+  participant SSE as GET /events (SSE)
   participant G2 as Guest B / Host
 
   G1->>API: vote (hu_guest cookie)
   API->>SVC: toggleVote({ guestId, questionId })
-  SVC->>DB: insert/delete Vote (transaction)
-  SVC->>PU: trigger session-K7Q2XM "questions.changed" { at }
-  API-->>G1: 200 { data: board }
-  PU-->>G2: questions.changed
+  SVC->>DB: insert/delete Vote + version++ (one transaction)
+  API-->>G1: 200 { data: { voted, votes } }
+  SSE->>DB: SELECT version (every 1 s)
+  SSE-->>G2: event: changed { version }
   G2->>API: GET /api/v1/sessions/K7Q2XM/questions
   API-->>G2: board ranked by rankQuestions() (hidden/anonymous filtered for guests)
 ```
@@ -69,8 +70,9 @@ sequenceDiagram
 
 Why one app instead of Express + Socket.IO (the proposal's first plan): Vercel cannot keep WebSocket connections
 open, and a separate API host would need its own preview environments. One Next.js app gives every PR a complete
-preview (UI + API + its own Neon database branch) with no extra setup. Pusher handles fan-out; payloads carry
-no data, so access rules stay in our services.
+preview (UI + API + its own Neon database branch) with no extra setup. Real time uses SSE with a version counter
+in Postgres: it works across serverless instances, needs no third-party account, and events carry no data, so
+access rules stay in our services.
 
 ## CI/CD pipeline
 

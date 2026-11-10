@@ -18,8 +18,8 @@ const partnerIndex = args.indexOf("--partner");
 const partner = partnerIndex >= 0 ? (args[partnerIndex + 1] ?? "") : "";
 
 const SPRINTS = {
-  "Sprint 1": { due: "2026-11-13T23:59:00Z", description: "Nov 11 – Nov 13. Goal: one full question loop works live (auth, sessions, ask, upvote, pin/answer) and deploys per PR." },
-  "Sprint 2": { due: "2026-11-17T23:59:00Z", description: "Nov 14 – Nov 17. Goal: moderation, merge, live polls, report, public API + docs, polish." },
+  "Sprint 1": { due: "2026-11-11T23:59:00Z", description: "Nov 10 – Nov 11. Goal: one full question loop works live (auth, sessions, ask, upvote, pin/answer) and deploys per PR." },
+  "Sprint 2": { due: "2026-11-13T23:59:00Z", description: "Nov 12 – Nov 13 (project due). Goal: moderation, merge, live polls, report, public API + docs, polish." },
 };
 const OWNER_LOGINS = { Ruoyu: "geekRoy0126", Qingyu: partner };
 

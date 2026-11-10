@@ -1,6 +1,6 @@
 <!--
-  AGENTS.md — instructions for AI coding agents working on HandUp (Antigravity is our primary harness;
-  Claude Code, Cursor and Copilot read this file too).
+  AGENTS.md — instructions for AI coding agents working on HandUp (Antigravity, Claude Code, Cursor and
+  Copilot all read this file).
 
   Maintained by BOTH partners (Ruoyu Wang, Qingyu Cheng). Rules change through PRs like code, and every change is
   logged in "8. Rules changelog" with the reason. Keep it under ~400 lines: every line costs context on every
@@ -58,14 +58,15 @@ plus real-time question ranking, live polls, a session report and a documented *
 | ORM | Prisma ORM with `prisma-client` generator + `@prisma/adapter-pg` | 7.10 |
 | Validation | zod | 4 |
 | Auth | Own JWT: `jose` (HS256) + `bcryptjs` | 6 · 3 |
-| Real-time | Pusher Channels (`pusher`, `pusher-js`) — added in issue #6 | — |
-| API docs | OpenAPI 3.1 JSON in `public/openapi.json` + `swagger-ui-react` — added in issue #12 | — |
+| Real-time | Server-Sent Events from a route handler + `Session.version` counter in Postgres (PRD §4.7) — #6 | — |
+| API docs | OpenAPI 3.1 JSON in `public/openapi.json` + Swagger UI (CDN) at `/api-docs` — #12 | — |
 | Tests | Vitest + Testing Library + jsdom · Playwright | 5 · 1.64 |
 | CI/CD | GitHub Actions · Vercel (preview per PR, production on `main`) | — |
 
 We use Next.js route handlers instead of a separate Express + Socket.IO server (the proposal's plan): one deploy
-target gives every PR a full-stack preview, and Vercel cannot host long-lived WebSockets, so real time goes
-through Pusher. Do not add Express, Socket.IO or a second server.
+target gives every PR a full-stack preview, and Vercel cannot host long-lived WebSockets, so real time is SSE
+backed by a version counter in Postgres (no third-party service). Do not add Express, Socket.IO, Pusher or a
+second server.
 
 ### 1.2 Version traps — your training data is probably older than this stack
 
@@ -100,7 +101,7 @@ src/
     server/                    `import "server-only"`: db.ts, auth/, services/, realtime.ts
     validation/                zod schemas shared by route handlers, Server Actions and forms
     api/                       http.ts — ok(), errorResponse(), ApiError, parseOrThrow(), toErrorResponse()
-    client/                    Browser-only helpers (Pusher subscription hook)
+    client/                    Browser-only helpers (`use-session-events` SSE hook, `api-fetch`)
   generated/prisma/            Generated client (git-ignored, never edit)
   proxy.ts                     Redirects logged-out users away from guarded pages
 prisma/                        schema.prisma, migrations/
@@ -116,7 +117,7 @@ Page / Client Component ──► Server Action (app/**/actions.ts) ─┐
 API client / guest board ─► Route handler (app/api/v1/**)  ────┼─► service (lib/server/services/*-service.ts)
                                                                 │        ├─► domain functions (lib/domain, pure)
                                                                 │        └─► db (Prisma) ──► Postgres
-Pusher ◄── realtime.ts ◄────────────────────────────────────────┘   (services publish after a successful write)
+SSE   ◄── realtime.ts ◄────────────────────────────────────────┘   (services bump Session.version in the write transaction)
 ```
 
 - **Route handlers and Server Actions are thin:** authenticate → `parseOrThrow(schema, input)` → call one service →
@@ -131,8 +132,9 @@ Pusher ◄── realtime.ts ◄────────────────
 - **Time is always passed in.** `now: Date` is a *required* parameter — never a default such as
   `now = new Date()`. Read the clock once per request in the service and pass `now` down.
 - **Server Components by default.** Add `"use client"` only to the smallest interactive leaf.
-- **Real-time (PRD §4.7):** after a write commits, the service calls `notifySession(code, event)`; the payload is
-  only `{ at }`. Clients refetch on every event. Never put question text, names or vote data in a Pusher payload.
+- **Real-time (PRD §4.7):** every service write that changes what someone sees calls
+  `bumpSessionVersion(tx, sessionId)` inside the same `db.$transaction`. The SSE route only sends `{ version }`;
+  clients refetch. Never put question text, names or vote data in an event.
 
 ### 1.4 Naming conventions
 
@@ -148,7 +150,7 @@ Pusher ◄── realtime.ts ◄────────────────
 | Time fields | `*At`, stored UTC | `answeredAt` |
 | zod schemas + types | `xxxSchema` and `type Xxx = z.infer<typeof xxxSchema>` | `askQuestionSchema` |
 | API paths | `/api/v1/<plural-noun>`, JSON keys camelCase | `/api/v1/sessions/K7Q2XM/questions` |
-| Pusher | channel `session-<CODE>`, events `questions.changed` · `poll.changed` · `session.ended` | `session-K7Q2XM` |
+| SSE | `GET /api/v1/sessions/<CODE>/events`, one event name `changed` | `event: changed` |
 | Tests | `*.test.ts(x)` beside the file; `*.int.test.ts`; `e2e/*.spec.ts` | `rank-questions.test.ts` |
 
 No default exports except Next special files. No `I` prefix on types. No abbreviations beyond `id`, `url`, `db`.
@@ -186,8 +188,8 @@ No default exports except Next special files. No `I` prefix on types. No abbrevi
 - Every visibility rule has a test from the guest side **and** the staff side.
 - Query the DOM by role and label; no `data-testid` unless nothing else works. Use `@testing-library/user-event`.
 - Integration tests use a real database (`docker compose up -d db`) and clean their tables in `beforeEach`.
-  Do not mock Prisma or `@/lib/server/db`. Mock only Pusher: `vi.mock("@/lib/server/realtime")`, and assert the
-  event name that was sent.
+  Do not mock Prisma or `@/lib/server/db`. Nothing external needs mocking: assert that `Session.version`
+  increased after a write that others must see. Use `tests/integration/helpers.ts` (`resetDb`, factories).
 - E2E real-time tests: open `browser.newContext()` twice (host + guest, or two guests), act in one, `expect` in the
   other with the default timeout — never `waitForTimeout`.
 - Coverage: ≥ 80% lines, branches and functions on `src/lib/domain` (enforced in `vitest.config.mts`).
@@ -212,7 +214,7 @@ status is always color **plus** a word; tap targets ≥ 44 × 44 px; every scree
 ### 3.1 Board
 
 GitHub Project columns: **Backlog → Sprint Todo → In Progress → In Review → Done**. Milestones `Sprint 1`
-(Nov 11 – Nov 13) and `Sprint 2` (Nov 14 – Nov 17). Moving a card is the human's job; the agent mentions which
+(Nov 10 – Nov 11) and `Sprint 2` (Nov 12 – Nov 13). Due date Nov 13. Moving a card is the human's job; the agent mentions which
 move is due.
 
 ### 3.2 Branches
@@ -256,14 +258,14 @@ Never put tests and implementation in one commit. Never weaken or delete a test 
 - Return DTOs from services (explicit `select`), never whole Prisma rows to the client.
 - Format dates with `Intl` in the UI; keep ISO UTC strings in data.
 - Pre-approved libraries (add in the PR that first needs them and name them): zod, jose, bcryptjs, Prisma,
-  `pusher`, `pusher-js`, `lucide-react`, `swagger-ui-react`, `@axe-core/playwright`, `qrcode`.
+  `lucide-react`, `@axe-core/playwright`, `qrcode`.
 - Ask before adding any other dependency; name it and the reason in the PR.
 - Add a new error code to `ErrorCode` in `http.ts` (with its status) instead of returning ad-hoc responses
   (`RATE_LIMITED` → 429 is added in #5).
 
 ## 5. Don't
 
-- Don't use `next-auth`/Auth.js, Express, Socket.IO, `axios`, `moment`/`dayjs`, `lodash`, Redux, CSS-in-JS or
+- Don't use `next-auth`/Auth.js, Express, Socket.IO, Pusher, `axios`, `moment`/`dayjs`, `lodash`, Redux, CSS-in-JS or
   Jest.
 - Don't call `db` from components, pages, route handlers or Server Actions — go through a service.
 - Don't call `new Date()`, `Date.now()` or `Math.random()` inside `src/lib/domain`.
@@ -313,6 +315,7 @@ Never put tests and implementation in one commit. Never weaken or delete a test 
 
 | Version | Date | Author | Change | Why |
 | --- | --- | --- | --- | --- |
+| 2.1 | 2026-11-10 | Ruoyu | Real time = SSE + `Session.version` instead of Pusher (§1.1, §1.3, §1.6); sprint dates moved to the Nov 13 deadline | No third-party secrets needed, so CI E2E and every preview can test real time; deadline is Nov 13 |
 | 2.0 | 2026-11-10 | Ruoyu | Ported HW3 v1.2 rules to HandUp: new context, architecture, naming, PRD §4 rules, visibility rules (§1.3, §5), two-context E2E rule, Pusher refetch-only payloads, single Next.js app instead of Express + Socket.IO | P2 project changed from TakeoutPick to HandUp; Vercel cannot host WebSockets and one deploy gives full-stack PR previews |
 | 1.2 | 2026-10-30 | Ruoyu | Real-clock exception for route-handler integration tests, with a 1 h margin | HW3 v1.1 run: "route owns `now`" contradicted "never the real clock" |
 | 1.1 | 2026-10-30 | Ruoyu | Scope = every AC; `now` required; kebab-case component files; no `db` mocks; pre-approved libraries; verified color pairs | HW3 runs A/B skipped an AC, used clock defaults, mocked `db`, failed contrast |

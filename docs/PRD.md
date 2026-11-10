@@ -88,25 +88,28 @@ kind: "guest" }`, 24 hours, httpOnly cookie `hu_guest`. A guest token is valid o
   Same visibility rules as the report. Documented in `public/openapi.json` (OpenAPI 3.1), shown at `/api-docs`.
 
 ### 4.7 Real time
-- Pusher Channels, public channel `session-<CODE>`. Events: `questions.changed`, `poll.changed`,
-  `session.ended`. Payload is only `{ "at": "<ISO time>" }`; clients **refetch** through the API.
-- Why refetch instead of sending data: hidden questions and anonymous authors can never leak through the public
-  channel, and repeated or out-of-order events are harmless.
-- Services publish only after the database write commits.
+- Server-Sent Events: `GET /api/v1/sessions/{code}/events` (anyone who can see the session). Every write that
+  changes what someone sees increments `Session.version` in the same transaction. The stream checks the version
+  every second and sends `event: changed` with `{ "version": n }`; clients **refetch** through the API.
+- Why refetch instead of sending data: hidden questions and anonymous authors can never leak through the stream,
+  and repeated or out-of-order events are harmless.
+- Why a version counter in Postgres instead of a pub/sub service: it works across serverless instances with no
+  third-party account or secret, so CI and every preview deploy test real time for real. Streams close after
+  4 minutes; `EventSource` reconnects automatically.
 
 ## 5. User stories
 
 Estimates: points (1 = under 2 h, 2 = half a day, 3 = a day, 5 = two days). `[#n]` = GitHub issue number.
-Owner = who implements it; the other partner reviews the PR.
+Owner = who implements it; the other partner reviews the PR. Due date: 2026-11-13.
 
-### Sprint 1 — "One full question loop works live" (2026-11-11 → 2026-11-13)
+### Sprint 1 — "One full question loop works live" (2026-11-10 → 2026-11-11)
 
 **[#1] Scaffold, rules file and PRD** · chore · 2 pts · Ruoyu
 - [ ] Next 16 + Prisma 7 + Tailwind 4 + Vitest + Playwright project runs (`npm run dev`, `npm test`)
 - [ ] `AGENTS.md`, `docs/PRD.md`, `docs/ui-spec.md` committed; full Prisma schema with the first migration
 - [ ] CI workflow (lint, typecheck, unit, integration, build, E2E) and security workflow committed
 
-**[#2] Deploy: Vercel + Neon + environments + preview E2E** · chore · 3 pts · Qingyu
+**[#2] Deploy: Vercel + Neon + environments + preview E2E** · chore · 3 pts · Ruoyu
 - [ ] Vercel project linked to the repo: every PR gets a preview URL, `main` deploys to production
 - [ ] Neon Vercel integration: each preview gets its own database branch; `vercel-build` runs migrations
 - [ ] Environment variables set separately for Development / Preview / Production; documented in
@@ -122,7 +125,7 @@ As a host, I want an account so that my sessions and reports belong to me.
 - [ ] Passwords hashed with bcryptjs cost 12; `passwordHash` never leaves the service layer
 - [ ] `POST /api/v1/auth/register`, `POST /api/v1/auth/login` return a JWT for API clients
 
-**[#4] US2 — Create a session with a join code** · feature · 3 pts · Qingyu
+**[#4] US2 — Create a session with a join code** · feature · 3 pts · Ruoyu
 As a host, I want to create a session with a short join code so my audience can get in within seconds.
 - [ ] Dashboard form: title (3–80 chars) → session created `LIVE` with a code following §4.1
 - [ ] Host page shows the code as `K7Q-2XM`, a copyable join link, and the session list on `/dashboard`
@@ -140,12 +143,12 @@ creating an account, so asking feels low-risk.
       minute."
 - [ ] New question appears on the board immediately for the asker
 
-**[#6] US4 — Upvote with live re-ranking** · feature · 5 pts · Qingyu
+**[#6] US4 — Upvote with live re-ranking** · feature · 5 pts · Ruoyu
 As an audience member, I want to upvote questions and watch the list re-rank live, so the questions most people
 care about rise to the top.
 - [ ] Upvote toggles (§4.2); own question's button is disabled with "Your question"
 - [ ] Board order follows §4.3 exactly (unit-tested domain function `rankQuestions`)
-- [ ] Pusher events (§4.7): a second browser sees new questions and vote changes within 2 s without reloading
+- [ ] Live updates (§4.7): a second browser sees new questions and vote changes within 2 s without reloading
 - [ ] Vote count has `aria-live="polite"`; E2E test with two browser contexts proves the live update
 
 **[#7] US5 — Host pins and marks answered** · feature · 2 pts · Ruoyu
@@ -154,9 +157,9 @@ As a host, I want to mark questions answered or pin one, so everyone sees what I
 - [ ] Mark answered moves it to the "Answered" section and unpins it; can be reopened
 - [ ] Guests see the change live; guests calling these endpoints get 403
 
-### Sprint 2 — "Moderation, polls, report, public API" (2026-11-14 → 2026-11-17)
+### Sprint 2 — "Moderation, polls, report, public API" (2026-11-12 → 2026-11-13)
 
-**[#8] US6 — Moderators hide and unhide** · feature · 3 pts · Qingyu
+**[#8] US6 — Moderators hide and unhide** · feature · 3 pts · Ruoyu
 As a moderator, I want to hide inappropriate questions so the board stays useful without the host managing it.
 - [ ] Host invites a moderator by the email of an existing account; unknown email → "No HandUp account with this
       email."; list and remove moderators
@@ -170,7 +173,7 @@ As a moderator, I want to merge duplicates so votes are not split across the sam
 - [ ] Votes move per §4.3 with no double counting (domain function `mergeVotes` + integration test)
 - [ ] Merged question disappears from the board; target shows "+1 merged"
 
-**[#10] US8 — Live polls** · feature · 5 pts · Qingyu
+**[#10] US8 — Live polls** · feature · 5 pts · Ruoyu
 As a host, I want to launch a multiple-choice or confidence poll and see results live, so I know whether to move
 on or explain again.
 - [ ] Host launches MC (2–6 options) or confidence poll (§4.4); second open poll → "Close the current poll
@@ -185,7 +188,7 @@ As a host, I want a report afterward with top and unanswered questions and poll 
 - [ ] "Download as Markdown" produces the same content (domain function `renderReportMarkdown`, unit-tested)
 - [ ] Empty states: no questions, no polls
 
-**[#12] US10 — Public API with documentation** · feature · 3 pts · Qingyu
+**[#12] US10 — Public API with documentation** · feature · 3 pts · Ruoyu
 As a developer, I want a documented API for session summaries and poll results, so a course site or Discord bot
 can show them.
 - [ ] Host creates, lists and revokes API keys at `/settings/api-keys`; key shown once (§4.6)
@@ -198,7 +201,7 @@ can show them.
 - [ ] Every page has loading, empty and error states; checked at 375 px and 1280 px
 - [ ] Host view readable on a projector (large type toggle)
 
-**[#14] Documentation package and demo** · docs · 3 pts · Qingyu (both contribute)
+**[#14] Documentation package and demo** · docs · 3 pts · Ruoyu
 - [ ] README: overview, features, live URL, screenshots, tech stack, test commands, links to every doc
 - [ ] Architecture and database diagrams up to date; API docs linked; setup/deploy guide verified on a clean
       clone

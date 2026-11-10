@@ -1,14 +1,17 @@
 # Partner contribution log
 
-Updated at the end of each sprint. Numbers come from GitHub (Insights → Contributors, and PR lists).
+Updated at the end of each sprint. Numbers come from GitHub (Insights → Contributors, and the PR lists).
+Each partner fills in their own column.
 
 | Area | Ruoyu Wang | Qingyu Cheng |
 | --- | --- | --- |
-| Planning & docs | PRD, AGENTS.md v2.0, sprint plan | |
-| Infrastructure | #1 scaffold + CI + security workflows | #2 Vercel/Neon/Pusher, previews, env management |
-| Features (owner) | #3 auth, #5 join/ask, #7 pin/answer, #9 merge, #11 report, #13 polish | #4 sessions, #6 live upvotes, #8 moderators, #10 polls, #12 public API, #14 docs |
-| PRs reviewed | | |
+| Planning & docs | PRD, AGENTS.md v2.x, sprint plan, architecture/database docs | |
+| Infrastructure | #1 scaffold, CI, security workflows, #2 deploy setup | |
+| Features | #3–#13 implementation | |
+| PR reviews | | |
+| Testing the deployed app | | |
 | Demo video | | |
+| Retros / standups | | |
 
 ## Per sprint
 
@@ -20,6 +23,6 @@ Updated at the end of each sprint. Numbers come from GitHub (Insights → Contri
 Commands to fill this in:
 ```bash
 git shortlog -sn --no-merges
-gh pr list --state merged --author <login> --limit 100 | wc -l
-gh search prs --repo <owner>/handup --reviewed-by <login> | wc -l
+gh pr list --state merged --author <login> --limit 100 --json number --jq length
+gh search prs --repo <owner>/handup --reviewed-by <login> --json number --jq length
 ```

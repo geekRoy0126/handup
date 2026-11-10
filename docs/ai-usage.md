@@ -1,6 +1,6 @@
 # AI-assisted development log
 
-Primary harness: **Antigravity**, guided by `AGENTS.md` (shared rules, maintained by both partners).
+AI harness(es) used: _fill in honestly per entry_. All of them are guided by `AGENTS.md` (shared rules file).
 This log is the evidence for the "AI Mastery" criterion: how we engineered context, how AI followed TDD, and
 how the rules evolved. Add an entry for every issue (2–5 lines is enough).
 
@@ -26,4 +26,5 @@ how the rules evolved. Add an entry for every issue (2–5 lines is enough).
 
 | Date | Who | Issue | What the AI did | What we corrected | Rules change? |
 | --- | --- | --- | --- | --- | --- |
-| 2026-11-10 | Ruoyu | #1 | Ported HW3 rules to HandUp, drafted PRD rules and CI workflows | Chose single Next.js app over Express + Socket.IO for Vercel previews | AGENTS.md v2.0 |
+| 2026-11-10 | Ruoyu | #1 | Ported HW3 rules to HandUp, drafted PRD rules, schema and CI workflows | Chose a single Next.js app over Express + Socket.IO for full-stack previews | AGENTS.md v2.0 |
+| 2026-11-10 | Ruoyu | #1 | Replaced Pusher with SSE + version counter | Removes third-party secrets so CI can test real time | AGENTS.md v2.1 |
