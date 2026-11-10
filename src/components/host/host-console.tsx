@@ -19,6 +19,7 @@ import { useCurrentUser } from "@/lib/client/use-current-user";
 import { usePolls } from "@/lib/client/use-polls";
 import { useQuestions } from "@/lib/client/use-questions";
 import { useSessionEvents } from "@/lib/client/use-session-events";
+import { useLargeText } from "@/lib/client/use-large-text";
 import { useSessionInfo } from "@/lib/client/use-session-info";
 
 export function HostConsole() {
@@ -33,6 +34,7 @@ export function HostConsole() {
     reloadPolls();
   });
   const [actionError, setActionError] = useState<string | null>(null);
+  const [isLargeText, setIsLargeText] = useLargeText();
 
   async function endSession() {
     if (!window.confirm("End this session? The audience will no longer be able to ask or vote.")) return;
@@ -44,7 +46,10 @@ export function HostConsole() {
   return (
     <>
       <AppHeader user={user} />
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-8">
+      <main
+        data-large-text={isLargeText}
+        className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-8 data-[large-text=true]:max-w-none"
+      >
         {state.kind === "loading" && <div aria-label="Loading session" className="h-48 animate-pulse rounded-xl bg-surface-muted" />}
         {state.kind === "error" && <ErrorState message={state.message} onRetry={reload} />}
         {state.kind === "ready" && state.role !== "HOST" && state.role !== "MODERATOR" && (
@@ -58,6 +63,9 @@ export function HostConsole() {
               <Link href={`/host/${state.session.code}/report`} className="text-sm font-medium text-brand-600 underline">
                 View report
               </Link>
+              <Button variant="secondary" aria-pressed={isLargeText} onClick={() => setIsLargeText(!isLargeText)}>
+                Large text
+              </Button>
               {state.role === "HOST" && state.session.status === "LIVE" && (
                 <Button variant="danger" onClick={endSession}>
                   End session
