@@ -82,3 +82,20 @@ describe("POST /api/v1/questions/[id]/merge (PRD US7)", () => {
     expect((await mergeAs(source.id, target.id, { cookie: bob.cookie })).status).toBe(403);
   });
 });
+
+describe("a vote cast while the question is being merged (found by E2E, #9)", () => {
+  it("is either moved to the target or refused, never silently lost", async () => {
+    for (let round = 0; round < 5; round += 1) {
+      await resetDb();
+      const { hostToken, bob, target, source } = await setup();
+      const [voteRes, mergeRes] = await Promise.all([
+        voteAs(source.id, bob.cookie),
+        mergeAs(source.id, target.id, { bearer: hostToken }),
+      ]);
+      expect(mergeRes.status).toBe(200);
+      const bobVotedTarget = await db.vote.count({ where: { questionId: target.id, guestId: bob.guestId } });
+      if (voteRes.status === 200) expect(bobVotedTarget).toBe(1);
+      else expect(voteRes.status).toBe(409);
+    }
+  });
+});
