@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { GuestPollCard } from "@/components/polls/guest-poll-card";
 import { AskForm } from "@/components/questions/ask-form";
 import { QuestionList } from "@/components/questions/question-list";
 import { VoteButton } from "@/components/questions/vote-button";
 import { ErrorState } from "@/components/ui/error-state";
 import { apiFetch } from "@/lib/client/api-fetch";
+import { usePolls } from "@/lib/client/use-polls";
 import { useQuestions } from "@/lib/client/use-questions";
 import { useSessionEvents } from "@/lib/client/use-session-events";
 import { useSessionInfo } from "@/lib/client/use-session-info";
@@ -20,9 +22,12 @@ export function GuestBoard() {
   const [join, setJoin] = useState<JoinState>({ kind: "joining" });
   const { state: info, reload: reloadInfo } = useSessionInfo(code);
   const { state, reload } = useQuestions(code, join.kind === "joined");
+  const { polls, reload: reloadPolls } = usePolls(code, join.kind === "joined");
+  const latestPoll = polls[0];
   const isEnded = info.kind === "ready" && info.session.status === "ENDED";
   useSessionEvents(code, join.kind === "joined", () => {
     reload();
+    reloadPolls();
     reloadInfo();
   });
 
@@ -41,6 +46,7 @@ export function GuestBoard() {
       {join.kind === "error" && <ErrorState message={join.message} />}
       {join.kind === "joined" && (
         <>
+          {latestPoll && <GuestPollCard poll={latestPoll} onAnswered={reloadPolls} />}
           {isEnded ? (
             <p role="status" className="rounded-xl border border-line bg-surface-muted p-4 text-sm">
               This session has ended. Thanks for taking part!
