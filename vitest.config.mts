@@ -36,6 +36,9 @@ export default defineConfig({
           name: "integration",
           include: ["tests/integration/**/*.int.test.ts"],
           environment: "node",
+          setupFiles: ["./tests/integration/setup.ts"],
+          // Files share one database and truncate it in beforeEach, so they must not run in parallel.
+          fileParallelism: false,
         },
       },
     ],
