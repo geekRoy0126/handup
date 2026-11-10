@@ -14,6 +14,7 @@ function actionsFor(q: QuestionItem): Action[] {
   const list: Action[] = [];
   if (q.status === "OPEN" && !q.isHidden) list.push(q.isPinned ? { action: "unpin", label: "Unpin" } : { action: "pin", label: "Pin" });
   list.push(q.status === "OPEN" ? { action: "answer", label: "Mark answered" } : { action: "reopen", label: "Reopen" });
+  list.push(q.isHidden ? { action: "unhide", label: "Unhide" } : { action: "hide", label: "Hide" });
   return list;
 }
 

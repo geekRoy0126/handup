@@ -1,4 +1,4 @@
-// PATCH /api/v1/questions/{id} — staff action on a question: { "action": "pin" | "unpin" | "answer" | "reopen" }.
+// PATCH /api/v1/questions/{id} — staff action on a question: { "action": "pin" | "unpin" | "answer" | "reopen" | "hide" | "unhide" }.
 import { ok, parseOrThrow, readJsonBody, toErrorResponse } from "@/lib/api/http";
 import { requireStaff } from "@/lib/server/services/access";
 import { applyQuestionAction } from "@/lib/server/services/moderation-service";
