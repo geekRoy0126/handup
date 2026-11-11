@@ -14,7 +14,7 @@ flowchart LR
   end
 
   subgraph Vercel["Vercel (preview per PR, production on main)"]
-    P["Pages + Server Actions<br/>(React Server Components)"]
+    P["Pages<br/>(Client Components call /api/v1)"]
     A["Route handlers<br/>/api/v1/**"]
     PUB["Public API<br/>/api/v1/public/** (X-API-Key)"]
     S["Services<br/>auth · session · question · moderation · poll · report · api-key"]
@@ -25,8 +25,8 @@ flowchart LR
 
   G -- HTTPS --> A
   H -- HTTPS --> P
+  P -- fetch --> A
   D -- HTTPS + X-API-Key --> PUB
-  P --> S
   A --> S
   PUB --> S
   S --> DOM
@@ -63,7 +63,7 @@ sequenceDiagram
 
 | Layer | Folder | May import | Tested by |
 | --- | --- | --- | --- |
-| Pages, components | `src/app`, `src/components` | services (Server Components/Actions only), validation | Component tests, E2E |
+| Pages, components | `src/app`, `src/components` | `lib/client` (fetch /api/v1), pure domain helpers | E2E (+ axe) |
 | Route handlers | `src/app/api/v1` | `lib/api/http`, validation, services | Integration tests |
 | Services | `src/lib/server/services` | `db`, domain, `realtime` | Integration tests (real Postgres) |
 | Domain | `src/lib/domain` | nothing with I/O | Unit tests, ≥ 80% coverage |
@@ -94,3 +94,17 @@ flowchart LR
   M --> PROD["Vercel production deploy<br/>migrate deploy"]
   PROD --> ES["E2E @smoke on production"]
 ```
+
+## Security
+
+| Concern | How HandUp handles it |
+| --- | --- |
+| Authentication | JWT (HS256, `jose`) in httpOnly, SameSite=Lax cookies (`Secure` in production); `Authorization: Bearer` for API clients; `JWT_SECRET` ≥ 32 chars checked at startup |
+| Passwords | bcrypt cost 12; one generic login error so accounts cannot be discovered |
+| Authorization | Checked in services for every request: `requireHost`, `requireStaff`, `requireGuest`, `requireParticipant`; guest passes are bound to one session; 401 vs 403 distinguished |
+| Privacy | `toQuestionView` is the only way questions leave the server: anonymous names removed for everyone, hidden/merged removed for guests and the public API; SSE events carry only a version number |
+| Public API | Keys stored as SHA-256 hashes, shown once, revocable; other owners' sessions answer 404 |
+| Input | zod on every body and parameter; length limits from the PRD; React escapes all text (no `dangerouslySetInnerHTML`) |
+| Abuse | 5 questions per guest per 60 s, counted in the database so it works on serverless |
+| Concurrency | Unique keys for votes and poll answers; row locks for vote vs merge; one open poll per session checked in a transaction |
+| Supply chain | `npm audit`, gitleaks, CodeQL, dependency review and Dependabot in CI |

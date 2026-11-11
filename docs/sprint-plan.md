@@ -12,25 +12,25 @@ each partner actually did.
 
 | Issue | Points | Status |
 | --- | --- | --- |
-| #1 Scaffold, rules file and PRD | 2 | |
-| #2 Deploy: Vercel + Neon + environments + preview E2E | 3 | |
-| #3 US1 Host account | 3 | |
-| #4 US2 Create session with join code | 3 | |
-| #5 US3 Join and ask | 3 | |
-| #6 US4 Upvote with live re-ranking | 5 | |
-| #7 US5 Pin and mark answered | 2 | |
+| #1 Scaffold, rules file and PRD | 2 | Code done, PR #15 open for review |
+| #2 Deploy: Vercel + Neon + environments + preview E2E | 3 | Needs Vercel/Neon login (see setup-deploy.md) |
+| #3 US1 Host account | 3 | Code done, PR #17 open for review |
+| #4 US2 Create session with join code | 3 | Code done, PR #18 open for review |
+| #5 US3 Join and ask | 3 | Code done, PR #19 open for review |
+| #6 US4 Upvote with live re-ranking | 5 | Code done, PR #20 open for review |
+| #7 US5 Pin and mark answered | 2 | Code done, PR #21 open for review |
 
 ## Sprint 2 — Nov 12 → Nov 13 · Goal: moderation, polls, report, public API, docs
 
 | Issue | Points | Status |
 | --- | --- | --- |
-| #8 US6 Moderators hide / unhide | 3 | |
-| #9 US7 Merge duplicates | 3 | |
-| #10 US8 Live polls | 5 | |
-| #11 US9 Session report | 3 | |
-| #12 US10 Public API + OpenAPI | 3 | |
-| #13 Polish and accessibility | 2 | |
-| #14 Documentation package and demo | 3 | |
+| #8 US6 Moderators hide / unhide | 3 | Code done, PR #22 open for review |
+| #9 US7 Merge duplicates | 3 | Code done, PR #23 open for review |
+| #10 US8 Live polls | 5 | Code done, PR #24 open for review |
+| #11 US9 Session report | 3 | Code done, PR #25 open for review |
+| #12 US10 Public API + OpenAPI | 3 | Code done, PR #26 open for review |
+| #13 Polish and accessibility | 2 | Code done, PR #27 open for review |
+| #14 Documentation package and demo | 3 | Code done, PR #28 open for review |
 
 ## Dependencies (merge order)
 

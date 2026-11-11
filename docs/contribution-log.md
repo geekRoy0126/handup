@@ -7,7 +7,7 @@ Each partner fills in their own column.
 | --- | --- | --- |
 | Planning & docs | PRD, AGENTS.md v2.x, sprint plan, architecture/database docs | |
 | Infrastructure | #1 scaffold, CI, security workflows, #2 deploy setup | |
-| Features | #3–#13 implementation | |
+| Features | #3–#13 implementation (test-first, PRs #17–#27) | |
 | PR reviews | | |
 | Testing the deployed app | | |
 | Demo video | | |
@@ -17,8 +17,8 @@ Each partner fills in their own column.
 
 | Sprint | Ruoyu: commits / PRs merged / reviews | Qingyu: commits / PRs merged / reviews |
 | --- | --- | --- |
-| Sprint 1 | | |
-| Sprint 2 | | |
+| Sprint 1 | see PRs #15–#21 | |
+| Sprint 2 | see PRs #22–#28 · 31 commits total on the stack | |
 
 Commands to fill this in:
 ```bash

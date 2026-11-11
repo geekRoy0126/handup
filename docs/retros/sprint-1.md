@@ -24,3 +24,14 @@ Held on: YYYY-MM-DD · Attendees: Ruoyu Wang, Qingyu Cheng
 
 ## Action items for next sprint
 - [ ]
+
+---
+
+## Facts to start the discussion (from git, CI and the AI usage log)
+
+- Planned: #1–#7, 21 points. Code for #1 and #3–#7 finished with test-first commits; #2 (Vercel/Neon) waits for
+  account login.
+- CI problems solved: Windows-built lockfile broke `npm ci` on Linux; gitleaks needed `pull-requests: read`.
+- Design changes: Pusher → SSE + `Session.version` (no third-party secret, real time testable in CI).
+- Bugs caught by tests before merge: guest calling staff endpoints got 401 instead of 403; test tokens signed at a
+  fixed date would have expired in CI.

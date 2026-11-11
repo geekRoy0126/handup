@@ -32,6 +32,7 @@ erDiagram
     string code UK "6 chars, PRD 4.1"
     string title
     enum status "LIVE | ENDED"
+    int version "bumped on every visible write (SSE)"
     string hostId FK
     datetime createdAt
     datetime endedAt
@@ -108,4 +109,5 @@ erDiagram
 | `mergedIntoId` self-relation + `MERGED` status | Merges keep history for the report instead of deleting rows |
 | Only the hash of an API key is stored | A database leak does not leak usable keys |
 | Indexes on `(sessionId, status)` and `(authorId, createdAt)` | Board queries and the 60-second rate-limit count |
+| `Session.version` counter (migration `session_version`) | Real time without a pub/sub service: writes increment it in the same transaction, the SSE route polls it |
 | `onDelete: Cascade` from Session | Deleting a session removes everything that belongs to it |
