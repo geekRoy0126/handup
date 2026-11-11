@@ -35,7 +35,7 @@ Variables (set in Vercel → Project → Settings → Environment Variables, sep
 
 | Variable | Development | Preview | Production |
 | --- | --- | --- | --- |
-| `DATABASE_URL` | `.env` | set by Neon integration per branch | set by Neon integration |
+| `DATABASE_URL`, `DATABASE_URL_UNPOOLED` | `.env` (only the first) | set by Neon integration per branch | set by Neon integration |
 | `JWT_SECRET` | `.env` | its own value | its own value (never reuse) |
 
 ## One-time cloud setup (issue #2)
