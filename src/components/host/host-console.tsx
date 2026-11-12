@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
+import { StaffActions } from "@/components/host/staff-actions";
 import { JoinCodeCard } from "@/components/sessions/join-code-card";
 import { StatusTag } from "@/components/sessions/status-tag";
 import { AppHeader } from "@/components/ui/app-header";
@@ -62,6 +63,7 @@ export function HostConsole() {
                     questions={board.questions}
                     emptyBody="Share the join code. Questions appear here live."
                     renderVote={(q) => <VoteCount votes={q.votes} />}
+                    renderActions={(q) => <StaffActions question={q} onDone={reloadBoard} onError={setActionError} />}
                   />
                 )}
               </section>
