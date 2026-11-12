@@ -56,3 +56,12 @@ export function parseOrThrow<S extends z.ZodType>(schema: S, input: unknown): z.
   }
   return result.data;
 }
+
+/** Reads a JSON request body, turning malformed JSON into a 400 instead of a 500. */
+export async function readJsonBody(req: Request): Promise<unknown> {
+  try {
+    return await req.json();
+  } catch {
+    throw new ApiError("BAD_REQUEST", "Request body must be valid JSON.");
+  }
+}

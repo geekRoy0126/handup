@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function HomePage() {
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-6 px-4 py-16">
@@ -6,7 +8,13 @@ export default function HomePage() {
         Ask questions and answer polls during a talk, anonymously if you like. The questions most people care
         about rise to the top.
       </p>
-      {/* TODO(#5): join-with-code form. TODO(#3): host sign-in link. */}
+      {/* TODO(#5): join-with-code form. */}
+      <p className="text-sm text-ink-muted">
+        Running a talk?{" "}
+        <Link href="/login" className="font-medium text-brand-600 underline">
+          Host a session
+        </Link>
+      </p>
     </main>
   );
 }
