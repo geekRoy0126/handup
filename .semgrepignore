@@ -1,0 +1,8 @@
+# Semgrep (security.yml) scans application code. Test fixtures use fake secrets and Math.random on purpose.
+node_modules/
+src/generated/
+package-lock.json
+tests/
+e2e/
+**/*.test.ts
+**/*.test.tsx
