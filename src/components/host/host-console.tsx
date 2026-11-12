@@ -3,6 +3,9 @@
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
+import { HostPollPanel } from "@/components/polls/host-poll-panel";
+import { ModeratorsPanel } from "@/components/host/moderators-panel";
+import { StaffActions } from "@/components/host/staff-actions";
 import { JoinCodeCard } from "@/components/sessions/join-code-card";
 import { StatusTag } from "@/components/sessions/status-tag";
 import { AppHeader } from "@/components/ui/app-header";
@@ -12,6 +15,7 @@ import { VoteCount } from "@/components/questions/vote-button";
 import { ErrorState } from "@/components/ui/error-state";
 import { apiFetch } from "@/lib/client/api-fetch";
 import { useCurrentUser } from "@/lib/client/use-current-user";
+import { usePolls } from "@/lib/client/use-polls";
 import { useQuestions } from "@/lib/client/use-questions";
 import { useSessionEvents } from "@/lib/client/use-session-events";
 import { useSessionInfo } from "@/lib/client/use-session-info";
@@ -22,7 +26,11 @@ export function HostConsole() {
   const { state, reload } = useSessionInfo(code);
   const isStaff = state.kind === "ready" && (state.role === "HOST" || state.role === "MODERATOR");
   const { state: board, reload: reloadBoard } = useQuestions(code, isStaff);
-  useSessionEvents(code, isStaff, reloadBoard);
+  const { polls, reload: reloadPolls } = usePolls(code, isStaff);
+  useSessionEvents(code, isStaff, () => {
+    reloadBoard();
+    reloadPolls();
+  });
   const [actionError, setActionError] = useState<string | null>(null);
 
   async function endSession() {
@@ -62,11 +70,30 @@ export function HostConsole() {
                     questions={board.questions}
                     emptyBody="Share the join code. Questions appear here live."
                     renderVote={(q) => <VoteCount votes={q.votes} />}
+                    renderActions={(q) => (
+                      <StaffActions
+                        question={q}
+                        mergeTargets={board.questions.filter((t) => t.id !== q.id && t.status === "OPEN")}
+                        onDone={reloadBoard}
+                        onError={setActionError}
+                      />
+                    )}
                   />
                 )}
               </section>
               <aside className="flex flex-col gap-4">
                 <JoinCodeCard code={state.session.code} />
+                <HostPollPanel
+                  code={state.session.code}
+                  polls={polls}
+                  canLaunch={state.role === "HOST" && state.session.status === "LIVE"}
+                  onChange={reloadPolls}
+                />
+                {state.role === "HOST" ? (
+                  <ModeratorsPanel code={state.session.code} />
+                ) : (
+                  <p className="rounded-xl border border-line bg-surface-muted p-4 text-sm">You are moderating this session.</p>
+                )}
               </aside>
             </div>
           </>
