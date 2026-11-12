@@ -23,6 +23,8 @@ test("host merges a duplicate; guests see one question with combined votes", asy
   await expect(duplicate.getByRole("button", { name: /Upvote/ })).toHaveAttribute("aria-pressed", "true");
 
   const hostCard = page.getByRole("article", { name: "What date is the midterm exam?" });
+  // Wait until the server has the vote (the host sees it via SSE); the voter's button updates optimistically.
+  await expect(hostCard.getByText("1 vote")).toBeVisible();
   await hostCard.getByLabel("Merge into").selectOption({ label: "When is the midterm?" });
   await hostCard.getByRole("button", { name: "Merge" }).click();
 
