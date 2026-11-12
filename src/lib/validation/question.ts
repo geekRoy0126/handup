@@ -25,3 +25,5 @@ export type AskQuestion = Omit<z.infer<typeof askQuestionSchema>, "displayName">
 export const questionActionSchema = z.object({
   action: z.enum(["pin", "unpin", "answer", "reopen", "hide", "unhide"]),
 });
+
+export const mergeQuestionSchema = z.object({ targetId: z.string().min(1) });

@@ -62,6 +62,7 @@ kind: "guest" }`, 24 hours, httpOnly cookie `hu_guest`. A guest token is valid o
   for host and moderators. Unhide restores them.
 - **Merge** source → target: same session, different questions, neither `MERGED`. Each vote on the source moves
   to the target unless that guest already voted for the target (then it is dropped — never double-count).
+  A vote by the target's author is dropped too (no voting on your own question).
   Source becomes `MERGED` with `mergedIntoId = target`, unpinned. Merges are final (no undo in v1).
 
 ### 4.4 Polls
