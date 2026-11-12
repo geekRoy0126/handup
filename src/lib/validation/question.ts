@@ -21,7 +21,7 @@ export const askQuestionSchema = z.object({
 });
 export type AskQuestion = Omit<z.infer<typeof askQuestionSchema>, "displayName"> & { displayName?: string };
 
-// Staff actions on one question (PRD §4.3). Hide/unhide are added with moderators in #8.
+// Staff actions on one question (PRD §4.3).
 export const questionActionSchema = z.object({
-  action: z.enum(["pin", "unpin", "answer", "reopen"]),
+  action: z.enum(["pin", "unpin", "answer", "reopen", "hide", "unhide"]),
 });

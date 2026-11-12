@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
+import { ModeratorsPanel } from "@/components/host/moderators-panel";
 import { StaffActions } from "@/components/host/staff-actions";
 import { JoinCodeCard } from "@/components/sessions/join-code-card";
 import { StatusTag } from "@/components/sessions/status-tag";
@@ -69,6 +70,11 @@ export function HostConsole() {
               </section>
               <aside className="flex flex-col gap-4">
                 <JoinCodeCard code={state.session.code} />
+                {state.role === "HOST" ? (
+                  <ModeratorsPanel code={state.session.code} />
+                ) : (
+                  <p className="rounded-xl border border-line bg-surface-muted p-4 text-sm">You are moderating this session.</p>
+                )}
               </aside>
             </div>
           </>
