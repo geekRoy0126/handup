@@ -65,12 +65,15 @@ export async function askQuestion(
   now: Date,
 ): Promise<QuestionView> {
   if (session.status === "ENDED") throw new ApiError("CONFLICT", "This session has ended.");
-  const recent = await db.question.count({
-    where: { authorId: guestId, createdAt: { gt: new Date(now.getTime() - RATE_WINDOW_MS) } },
-  });
-  if (recent >= MAX_QUESTIONS_PER_MINUTE) throw new ApiError("RATE_LIMITED", "Slow down — try again in a minute.");
 
   const created = await db.$transaction(async (tx) => {
+    // Lock this guest's row so their asks run one at a time; otherwise a burst of requests all count the same
+    // rows before any of them inserts, and every one gets through (#44). Other guests are not blocked.
+    await tx.$queryRaw`SELECT id FROM "Guest" WHERE id = ${guestId} FOR UPDATE`;
+    const recent = await tx.question.count({
+      where: { authorId: guestId, createdAt: { gt: new Date(now.getTime() - RATE_WINDOW_MS) } },
+    });
+    if (recent >= MAX_QUESTIONS_PER_MINUTE) throw new ApiError("RATE_LIMITED", "Slow down — try again in a minute.");
     if (input.displayName) await tx.guest.update({ where: { id: guestId }, data: { displayName: input.displayName } });
     const question = await tx.question.create({
       data: { sessionId: session.id, authorId: guestId, body: input.body, isAnonymous: input.isAnonymous, createdAt: now },
