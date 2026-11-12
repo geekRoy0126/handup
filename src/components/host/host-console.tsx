@@ -7,15 +7,19 @@ import { JoinCodeCard } from "@/components/sessions/join-code-card";
 import { StatusTag } from "@/components/sessions/status-tag";
 import { AppHeader } from "@/components/ui/app-header";
 import { Button } from "@/components/ui/button";
+import { QuestionList } from "@/components/questions/question-list";
 import { ErrorState } from "@/components/ui/error-state";
 import { apiFetch } from "@/lib/client/api-fetch";
 import { useCurrentUser } from "@/lib/client/use-current-user";
+import { useQuestions } from "@/lib/client/use-questions";
 import { useSessionInfo } from "@/lib/client/use-session-info";
 
 export function HostConsole() {
   const { code } = useParams<{ code: string }>();
   const user = useCurrentUser();
   const { state, reload } = useSessionInfo(code);
+  const isStaff = state.kind === "ready" && (state.role === "HOST" || state.role === "MODERATOR");
+  const { state: board, reload: reloadBoard } = useQuestions(code, isStaff);
   const [actionError, setActionError] = useState<string | null>(null);
 
   async function endSession() {
@@ -48,7 +52,11 @@ export function HostConsole() {
             {actionError && <ErrorState message={actionError} />}
             <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
               <section aria-label="Questions" className="flex flex-col gap-4">
-                {/* TODO(#5): staff question board. */}
+                {board.kind === "loading" && <div aria-label="Loading questions" className="h-32 animate-pulse rounded-xl bg-surface-muted" />}
+                {board.kind === "error" && <ErrorState message={board.message} onRetry={reloadBoard} />}
+                {board.kind === "ready" && (
+                  <QuestionList questions={board.questions} emptyBody="Share the join code. Questions appear here live." />
+                )}
               </section>
               <aside className="flex flex-col gap-4">
                 <JoinCodeCard code={state.session.code} />

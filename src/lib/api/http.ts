@@ -9,6 +9,7 @@ export type ErrorCode =
   | "FORBIDDEN"
   | "NOT_FOUND"
   | "CONFLICT"
+  | "RATE_LIMITED"
   | "INTERNAL";
 
 const STATUS: Record<ErrorCode, number> = {
@@ -18,6 +19,7 @@ const STATUS: Record<ErrorCode, number> = {
   FORBIDDEN: 403,
   NOT_FOUND: 404,
   CONFLICT: 409,
+  RATE_LIMITED: 429,
   INTERNAL: 500,
 };
 
