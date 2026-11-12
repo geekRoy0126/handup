@@ -8,10 +8,12 @@ import { StatusTag } from "@/components/sessions/status-tag";
 import { AppHeader } from "@/components/ui/app-header";
 import { Button } from "@/components/ui/button";
 import { QuestionList } from "@/components/questions/question-list";
+import { VoteCount } from "@/components/questions/vote-button";
 import { ErrorState } from "@/components/ui/error-state";
 import { apiFetch } from "@/lib/client/api-fetch";
 import { useCurrentUser } from "@/lib/client/use-current-user";
 import { useQuestions } from "@/lib/client/use-questions";
+import { useSessionEvents } from "@/lib/client/use-session-events";
 import { useSessionInfo } from "@/lib/client/use-session-info";
 
 export function HostConsole() {
@@ -20,6 +22,7 @@ export function HostConsole() {
   const { state, reload } = useSessionInfo(code);
   const isStaff = state.kind === "ready" && (state.role === "HOST" || state.role === "MODERATOR");
   const { state: board, reload: reloadBoard } = useQuestions(code, isStaff);
+  useSessionEvents(code, isStaff, reloadBoard);
   const [actionError, setActionError] = useState<string | null>(null);
 
   async function endSession() {
@@ -55,7 +58,11 @@ export function HostConsole() {
                 {board.kind === "loading" && <div aria-label="Loading questions" className="h-32 animate-pulse rounded-xl bg-surface-muted" />}
                 {board.kind === "error" && <ErrorState message={board.message} onRetry={reloadBoard} />}
                 {board.kind === "ready" && (
-                  <QuestionList questions={board.questions} emptyBody="Share the join code. Questions appear here live." />
+                  <QuestionList
+                    questions={board.questions}
+                    emptyBody="Share the join code. Questions appear here live."
+                    renderVote={(q) => <VoteCount votes={q.votes} />}
+                  />
                 )}
               </section>
               <aside className="flex flex-col gap-4">

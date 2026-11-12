@@ -50,6 +50,8 @@ model Session {
   code      String        @unique
   title     String
   status    SessionStatus @default(LIVE)
+  /// Incremented on every write others must see; the SSE stream watches it (PRD §4.7).
+  version   Int           @default(0)
   hostId    String
   createdAt DateTime      @default(now())
   endedAt   DateTime?
