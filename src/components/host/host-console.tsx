@@ -1,0 +1,62 @@
+"use client";
+
+import { useParams } from "next/navigation";
+import { useState } from "react";
+
+import { JoinCodeCard } from "@/components/sessions/join-code-card";
+import { StatusTag } from "@/components/sessions/status-tag";
+import { AppHeader } from "@/components/ui/app-header";
+import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/ui/error-state";
+import { apiFetch } from "@/lib/client/api-fetch";
+import { useCurrentUser } from "@/lib/client/use-current-user";
+import { useSessionInfo } from "@/lib/client/use-session-info";
+
+export function HostConsole() {
+  const { code } = useParams<{ code: string }>();
+  const user = useCurrentUser();
+  const { state, reload } = useSessionInfo(code);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  async function endSession() {
+    if (!window.confirm("End this session? The audience will no longer be able to ask or vote.")) return;
+    const result = await apiFetch(`/api/v1/sessions/${code}/end`, { method: "POST" });
+    if (result.ok) reload();
+    else setActionError(result.message);
+  }
+
+  return (
+    <>
+      <AppHeader user={user} />
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-8">
+        {state.kind === "loading" && <div aria-label="Loading session" className="h-48 animate-pulse rounded-xl bg-surface-muted" />}
+        {state.kind === "error" && <ErrorState message={state.message} onRetry={reload} />}
+        {state.kind === "ready" && state.role !== "HOST" && state.role !== "MODERATOR" && (
+          <ErrorState message="Only the host and moderators of this session can open its console." />
+        )}
+        {state.kind === "ready" && (state.role === "HOST" || state.role === "MODERATOR") && (
+          <>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="flex-1 text-3xl font-bold">{state.session.title}</h1>
+              <StatusTag status={state.session.status} />
+              {state.role === "HOST" && state.session.status === "LIVE" && (
+                <Button variant="danger" onClick={endSession}>
+                  End session
+                </Button>
+              )}
+            </div>
+            {actionError && <ErrorState message={actionError} />}
+            <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+              <section aria-label="Questions" className="flex flex-col gap-4">
+                {/* TODO(#5): staff question board. */}
+              </section>
+              <aside className="flex flex-col gap-4">
+                <JoinCodeCard code={state.session.code} />
+              </aside>
+            </div>
+          </>
+        )}
+      </main>
+    </>
+  );
+}
