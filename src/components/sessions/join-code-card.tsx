@@ -8,13 +8,19 @@ import { formatJoinCode } from "@/lib/domain/join-code";
 type JoinCodeCardProps = { code: string };
 
 export function JoinCodeCard({ code }: JoinCodeCardProps) {
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const joinPath = `/join/${code}`;
 
   async function copyLink() {
-    await navigator.clipboard?.writeText(`${window.location.origin}${joinPath}`).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    // Only claim success when the write worked: the API is missing on non-HTTPS pages and can be refused (#45).
+    try {
+      if (!navigator.clipboard) throw new Error("Clipboard API unavailable");
+      await navigator.clipboard.writeText(`${window.location.origin}${joinPath}`);
+      setCopyState("copied");
+      setTimeout(() => setCopyState("idle"), 2000);
+    } catch {
+      setCopyState("failed");
+    }
   }
 
   return (
@@ -27,10 +33,18 @@ export function JoinCodeCard({ code }: JoinCodeCardProps) {
         Audience goes to the HandUp home page and types the code, or opens <span className="font-mono">{joinPath}</span>
       </p>
       <Button variant="secondary" className="mt-3" onClick={copyLink}>
-        {copied ? "Link copied" : "Copy join link"}
+        {copyState === "copied" ? "Link copied" : "Copy join link"}
       </Button>
+      {copyState === "failed" && (
+        <p role="alert" className="mt-2 text-sm text-danger">
+          Couldn&apos;t copy. Select the link and copy it by hand:{" "}
+          <span className="font-mono text-ink select-all">
+            {typeof window === "undefined" ? joinPath : `${window.location.origin}${joinPath}`}
+          </span>
+        </p>
+      )}
       <span className="sr-only" aria-live="polite">
-        {copied ? "Join link copied" : ""}
+        {copyState === "copied" ? "Join link copied" : ""}
       </span>
     </section>
   );
