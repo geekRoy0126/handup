@@ -5,7 +5,7 @@ import { GET as getSession } from "@/app/api/v1/sessions/[code]/route";
 import { GET as listSessions, POST as createSessionRoute } from "@/app/api/v1/sessions/route";
 import { createSession } from "@/lib/server/services/session-service";
 
-import { createUser } from "./factories";
+import { createGuest, createUser } from "./factories";
 import { ctx, jsonRequest, readJson, resetDb, TEST_NOW } from "./helpers";
 
 type SessionDto = { code: string; title: string; status: string; endedAt: string | null; role?: string };
@@ -112,6 +112,21 @@ describe("POST /api/v1/sessions/[code]/end", () => {
     const other = await createUser("Other");
     const code = await createCode(host.token);
     const req = jsonRequest(`/api/v1/sessions/${code}/end`, { method: "POST", bearer: other.token });
+    expect((await endSession(req, ctx({ code }))).status).toBe(403);
+  });
+
+  it("answers 401 without a token (#40)", async () => {
+    const host = await createUser();
+    const code = await createCode(host.token);
+    const req = jsonRequest(`/api/v1/sessions/${code}/end`, { method: "POST" });
+    expect((await endSession(req, ctx({ code }))).status).toBe(401);
+  });
+
+  it("answers 403 for a guest of this session (#40)", async () => {
+    const host = await createUser();
+    const code = await createCode(host.token);
+    const guest = await createGuest(code);
+    const req = jsonRequest(`/api/v1/sessions/${code}/end`, { method: "POST", cookie: guest.cookie });
     expect((await endSession(req, ctx({ code }))).status).toBe(403);
   });
 });
