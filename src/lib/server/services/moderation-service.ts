@@ -5,7 +5,7 @@ import { mergeVotes } from "@/lib/domain/merge-votes";
 import { planQuestionAction, type QuestionAction } from "@/lib/domain/question-actions";
 import { db } from "@/lib/server/db";
 import { bumpSessionVersion } from "@/lib/server/realtime";
-import { lockQuestions } from "@/lib/server/locks";
+import { lockQuestions, lockSessionForStaffWrite } from "@/lib/server/locks";
 
 type TargetQuestion = {
   id: string;
@@ -18,10 +18,10 @@ type TargetQuestion = {
 /** Applies a staff action (pin, answer, hide…) in one transaction and notifies live screens. */
 export async function applyQuestionAction(question: TargetQuestion, action: QuestionAction, now: Date) {
   return db.$transaction(async (tx) => {
-    // Bumping the version first locks the Session row, so staff actions in one session run one at a time; then
-    // plan from the row as it is now, not as it was before the transaction (#59). Otherwise two pins at once
-    // leave two pinned questions, and "answer" racing "pin" leaves an answered question pinned.
-    await bumpSessionVersion(tx, question.session.id);
+    // Staff actions in one session run one at a time, and are planned from the row as it is now, not as it was
+    // before the transaction (#59). Otherwise two pins at once leave two pinned questions, and "answer" racing
+    // "pin" leaves an answered question pinned.
+    await lockSessionForStaffWrite(tx, question.session.id);
     const current = await tx.question.findUniqueOrThrow({
       where: { id: question.id },
       select: { status: true, isPinned: true, isHidden: true },
@@ -39,6 +39,7 @@ export async function applyQuestionAction(question: TargetQuestion, action: Ques
       data: result.data,
       select: { id: true, status: true, isPinned: true, isHidden: true, answeredAt: true },
     });
+    await bumpSessionVersion(tx, question.session.id);
     return updated;
   });
 }

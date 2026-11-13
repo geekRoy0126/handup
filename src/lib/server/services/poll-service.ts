@@ -3,6 +3,7 @@ import "server-only";
 import { ApiError } from "@/lib/api/http";
 import { CONFIDENCE_OPTIONS, computePollResults, type PollResults } from "@/lib/domain/poll-results";
 import { db } from "@/lib/server/db";
+import { lockSessionForStaffWrite } from "@/lib/server/locks";
 import { bumpSessionVersion } from "@/lib/server/realtime";
 import type { CreatePoll } from "@/lib/validation/poll";
 
@@ -62,8 +63,8 @@ export async function createPoll(session: SessionRow, input: CreatePoll, now: Da
   if (session.status === "ENDED") throw new ApiError("CONFLICT", "This session has ended.");
   const labels = input.kind === "CONFIDENCE" ? [...CONFIDENCE_OPTIONS] : input.options;
   const created = await db.$transaction(async (tx) => {
-    // Lock the Session row first (via the version bump) so two launches can't both count 0 open polls (#59).
-    await bumpSessionVersion(tx, session.id);
+    // Two launches at once must not both count 0 open polls (#59).
+    await lockSessionForStaffWrite(tx, session.id);
     const open = await tx.poll.count({ where: { sessionId: session.id, status: "OPEN" } });
     if (open > 0) throw new ApiError("CONFLICT", "Close the current poll first.");
     const poll = await tx.poll.create({
@@ -76,6 +77,7 @@ export async function createPoll(session: SessionRow, input: CreatePoll, now: Da
       },
       select: { id: true },
     });
+    await bumpSessionVersion(tx, session.id);
     return poll;
   });
   return getPollView(created.id, { role: "STAFF" });
