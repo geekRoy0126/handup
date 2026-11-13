@@ -35,7 +35,7 @@ export function VoteButton({ question, disabled = false, onVoted }: VoteButtonPr
         aria-pressed={voted}
         aria-label={isOwn ? `Your question, ${voteLabel(votes)}` : `Upvote, ${voteLabel(votes)}`}
         className={`flex size-12 items-center justify-center rounded-lg border text-xl font-bold transition-colors focus-visible:outline-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed ${
-          voted ? "border-brand-600 bg-brand-600 text-white" : "border-line bg-surface text-ink hover:bg-surface-muted"
+          voted ? "border-brand-600 bg-brand-600 text-on-brand" : "border-line bg-surface text-ink hover:bg-surface-muted"
         } ${isOwn ? "opacity-60" : ""}`}
       >
         <span aria-hidden="true">▲</span>
