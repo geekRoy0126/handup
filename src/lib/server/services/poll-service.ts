@@ -65,6 +65,8 @@ export async function createPoll(session: SessionRow, input: CreatePoll, now: Da
   const created = await db.$transaction(async (tx) => {
     // Two launches at once must not both count 0 open polls (#59).
     await lockSessionForStaffWrite(tx, session.id);
+    const { status: sessionStatus } = await tx.session.findUniqueOrThrow({ where: { id: session.id }, select: { status: true } });
+    if (sessionStatus === "ENDED") throw new ApiError("CONFLICT", "This session has ended.");
     const open = await tx.poll.count({ where: { sessionId: session.id, status: "OPEN" } });
     if (open > 0) throw new ApiError("CONFLICT", "Close the current poll first.");
     const poll = await tx.poll.create({
@@ -111,6 +113,10 @@ export async function respondToPoll(poll: PollRef, guestId: string, optionId: st
   if (poll.status === "CLOSED") throw new ApiError("CONFLICT", "This poll is closed.");
   if (!poll.options.some((o) => o.id === optionId)) throw new ApiError("VALIDATION_FAILED", "optionId: not an option of this poll");
   await db.$transaction(async (tx) => {
+    // Re-read under the poll's row lock: closing the poll (or ending the session, which closes it) updates this
+    // row, so an answer can't land after the poll closed (#60).
+    const [current] = await tx.$queryRaw<{ status: string }[]>`SELECT status FROM "Poll" WHERE id = ${poll.id} FOR UPDATE`;
+    if (current?.status !== "OPEN") throw new ApiError("CONFLICT", "This poll is closed.");
     await tx.pollResponse.upsert({
       where: { pollId_guestId: { pollId: poll.id, guestId } },
       create: { pollId: poll.id, guestId, optionId },

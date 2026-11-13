@@ -22,6 +22,9 @@ export async function applyQuestionAction(question: TargetQuestion, action: Ques
     // before the transaction (#59). Otherwise two pins at once leave two pinned questions, and "answer" racing
     // "pin" leaves an answered question pinned.
     await lockSessionForStaffWrite(tx, question.session.id);
+    // An ended session is final (PRD §4.5): its report must not change afterwards (#60).
+    const { status: sessionStatus } = await tx.session.findUniqueOrThrow({ where: { id: question.session.id }, select: { status: true } });
+    if (sessionStatus === "ENDED") throw new ApiError("CONFLICT", "This session has ended.");
     const current = await tx.question.findUniqueOrThrow({
       where: { id: question.id },
       select: { status: true, isPinned: true, isHidden: true },
@@ -52,6 +55,10 @@ export async function mergeQuestion(sessionId: string, sourceId: string, targetI
   // Lock both rows first, then read: a vote on the source either commits before (and is moved) or after
   // (and is refused because the source is MERGED).
   return db.$transaction(async (tx) => {
+    // Same lock order as other staff writes (session lock, then question rows), so merge and pin can't deadlock.
+    await lockSessionForStaffWrite(tx, sessionId);
+    const { status: sessionStatus } = await tx.session.findUniqueOrThrow({ where: { id: sessionId }, select: { status: true } });
+    if (sessionStatus === "ENDED") throw new ApiError("CONFLICT", "This session has ended.");
     await lockQuestions(tx, [sourceId, targetId]);
     const [source, target] = await Promise.all([
       tx.question.findUnique({ where: { id: sourceId }, select }),
