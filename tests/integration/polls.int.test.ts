@@ -6,9 +6,10 @@ import { POST as invite } from "@/app/api/v1/sessions/[code]/moderators/route";
 import { GET as listPolls, POST as createPoll } from "@/app/api/v1/sessions/[code]/polls/route";
 import { getSessionVersion } from "@/lib/server/realtime";
 import { findSessionByCode } from "@/lib/server/services/access";
+import { endSession } from "@/lib/server/services/session-service";
 
 import { createGuest, createLiveSession, createUser } from "./factories";
-import { ctx, jsonRequest, readJson, resetDb } from "./helpers";
+import { ctx, jsonRequest, readJson, resetDb, TEST_NOW } from "./helpers";
 
 type PollOption = { id: string; label: string };
 type ResultOption = { optionId: string; count: number; percent: number };
@@ -153,5 +154,17 @@ describe("answering polls", () => {
     const guest = await createGuest(code);
     const res = await closePoll(jsonRequest(`/api/v1/polls/${poll.id}/close`, { method: "POST", cookie: guest.cookie }), ctx({ id: poll.id }));
     expect(res.status).toBe(403);
+  });
+});
+
+describe("polls when the session ends (#60)", () => {
+  it("ending the session closes its open poll, and later answers get 409", async () => {
+    const { code, hostToken } = await createLiveSession();
+    const guest = await createGuest(code);
+    const poll = await createOk(code, hostToken);
+    await endSession(await findSessionByCode(code), TEST_NOW);
+    const [after] = await pollsAs(code, { bearer: hostToken });
+    expect(after?.status).toBe("CLOSED");
+    expect((await answer(poll.id, guest.cookie, poll.options[0]?.id ?? "")).status).toBe(409);
   });
 });

@@ -6,6 +6,7 @@ import { db } from "@/lib/server/db";
 import { getSessionVersion } from "@/lib/server/realtime";
 import { findSessionByCode } from "@/lib/server/services/access";
 import { askQuestion } from "@/lib/server/services/question-service";
+import { endSession } from "@/lib/server/services/session-service";
 
 import { createGuest, createLiveSession, createUser } from "./factories";
 import { ctx, jsonRequest, resetDb, TEST_NOW } from "./helpers";
@@ -109,6 +110,17 @@ describe("PATCH /api/v1/questions/[id] — pin and answer (PRD US5)", () => {
       await Promise.all([actAs(first.id, "answer", { bearer: hostToken }), actAs(first.id, "pin", { bearer: hostToken })]);
       const after = await row(first.id);
       expect(after.status === "ANSWERED" && after.isPinned).toBe(false);
+    }
+  });
+});
+
+describe("staff actions on an ended session (#60)", () => {
+  it("answers 409 to pin, answer, reopen and hide once the session has ended", async () => {
+    const { first, second, hostToken, session } = await setup();
+    await actAs(second.id, "answer", { bearer: hostToken });
+    await endSession(session, TEST_NOW);
+    for (const [id, action] of [[first.id, "pin"], [first.id, "answer"], [second.id, "reopen"], [first.id, "hide"]] as const) {
+      expect((await actAs(id, action, { bearer: hostToken })).status).toBe(409);
     }
   });
 });
