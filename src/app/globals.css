@@ -43,3 +43,23 @@ body {
   background: var(--color-surface);
   color: var(--color-ink);
 }
+
+/* Host console "Large text" mode for projectors (#13). */
+main[data-large-text="true"] article p:first-of-type,
+main[data-large-text="true"] article p + p {
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+main[data-large-text="true"] h1 {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
