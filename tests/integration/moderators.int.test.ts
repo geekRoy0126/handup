@@ -110,3 +110,15 @@ describe("hide and unhide (PRD §4.3)", () => {
     expect((await actAs(question.id, "hide", { cookie: guest.cookie })).status).toBe(403);
   });
 });
+
+describe("live updates when moderators change (#62)", () => {
+  it("adding and removing a moderator each bump the session version, so open consoles refetch", async () => {
+    const { code, hostToken, ta, session } = await setup();
+    const before = await getSessionVersion(session.id);
+    await inviteAs(code, hostToken, ta.user.email);
+    expect(await getSessionVersion(session.id)).toBe(before + 1);
+    const req = jsonRequest(`/api/v1/sessions/${code}/moderators/${ta.user.id}`, { method: "DELETE", bearer: hostToken });
+    await removeModerator(req, ctx({ code, userId: ta.user.id }));
+    expect(await getSessionVersion(session.id)).toBe(before + 2);
+  });
+});
