@@ -24,4 +24,6 @@ test("API docs page loads the OpenAPI spec @smoke", async ({ page, request }) =>
   expect(spec.ok()).toBe(true);
   await page.goto("/api-docs");
   await expect(page).toHaveTitle("HandUp API docs");
+  // Swagger UI actually ran: with a wrong integrity hash the browser blocks the script and nothing renders (#63).
+  await expect(page.getByText("HandUp API").first()).toBeVisible();
 });

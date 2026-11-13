@@ -23,7 +23,7 @@ function hashKey(key: string): string {
 
 /** Returns the raw key exactly once; only its hash and prefix are stored. */
 export async function createApiKey(ownerId: string, name: string, now: Date): Promise<{ key: string; apiKey: ApiKeyDto }> {
-  const key = generateApiKey(randomBytes(32));
+  const key = generateApiKey(randomBytes);
   const apiKey = await db.apiKey.create({
     data: { ownerId, name, prefix: apiKeyPrefix(key), hash: hashKey(key), createdAt: now },
     select,
