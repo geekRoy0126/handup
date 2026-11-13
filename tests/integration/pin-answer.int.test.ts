@@ -71,4 +71,27 @@ describe("PATCH /api/v1/questions/[id] — pin and answer (PRD US5)", () => {
     expect((await actAs(first.id, "pin", { bearer: hostToken })).status).toBe(409);
     expect((await actAs(first.id, "explode", { bearer: hostToken })).status).toBe(422);
   });
+
+  it("leaves exactly one pinned question when two staff pin different questions at once (#59)", async () => {
+    for (let round = 0; round < 5; round += 1) {
+      await resetDb();
+      const { first, second, hostToken } = await setup();
+      const responses = await Promise.all([
+        actAs(first.id, "pin", { bearer: hostToken }),
+        actAs(second.id, "pin", { bearer: hostToken }),
+      ]);
+      expect(responses.map((r) => r.status)).toEqual([200, 200]);
+      expect(await db.question.count({ where: { id: { in: [first.id, second.id] }, isPinned: true } })).toBe(1);
+    }
+  });
+
+  it("never ends ANSWERED and pinned when answer and pin race on one question (#59)", async () => {
+    for (let round = 0; round < 5; round += 1) {
+      await resetDb();
+      const { first, hostToken } = await setup();
+      await Promise.all([actAs(first.id, "answer", { bearer: hostToken }), actAs(first.id, "pin", { bearer: hostToken })]);
+      const after = await row(first.id);
+      expect(after.status === "ANSWERED" && after.isPinned).toBe(false);
+    }
+  });
 });
