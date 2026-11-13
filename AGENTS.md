@@ -166,9 +166,11 @@ No default exports except Next special files. No `I` prefix on types. No abbrevi
   - Uniqueness (email, join code, one vote): insert and catch Prisma `P2002` with `isUniqueViolation()`
     (`src/lib/server/prisma-errors.ts`), or use `createMany({ skipDuplicates: true })`. Never `findUnique` then
     `create` (#40, #42, #43).
-  - Limits and "only one" rules (5 questions per minute, one pinned question, one open poll): first lock the row
-    that owns the rule (`SELECT … FOR UPDATE` on the Guest; `bumpSessionVersion` first for per-session rules),
-    then count and write in the same transaction (#44).
+  - Limits and "only one" rules (5 questions per minute, one pinned question, one open poll): first take the lock
+    that owns the rule (`SELECT … FOR UPDATE` on the Guest row; `lockSessionForStaffWrite()` for per-session
+    rules), then count and write in the same transaction (#44, #59).
+  - Lock order: question rows before the Session row. Votes lock the question and then bump `Session.version`,
+    so never update the Session row first in a transaction that later touches questions; it deadlocks (#59).
 - Keep functions under ~40 lines and files under ~200 lines; split by responsibility.
 - Comments explain *why*. Link non-obvious decisions to their issue: `// Ties go to the older question (#6).`
 - Every TODO has an issue: `// TODO(#12): paginate`. No orphan TODOs.
@@ -349,7 +351,7 @@ Never put tests and implementation in one commit. Never weaken or delete a test 
 
 | Version | Date | Author | Change | Why |
 | --- | --- | --- | --- | --- |
-| 2.3 | 2026-11-12 | Qingyu | §1.5 check-then-write rule (unique insert + `P2002`, row lock then count); §1.6 concurrent tests that are red first, spies instead of timing; §3.5 agent-drafted review comments; §5 Semgrep suppressions; §6.1 crypto randomness, safe redirects, escaping outside React, CDN integrity, Semgrep; JWT check is on first use, not at startup | Reviewing #15–#29 found the same race four times (registration and join-code 500s, a vote double-tap 500, a burst past the rate limit; #40, #42–#44), plus a backslash open redirect (#40), `Math.random` join codes (#43), unescaped Markdown export (#25) and CDN scripts without integrity (#26). CodeQL is skipped on the private repo, so Semgrep was added (#46) |
+| 2.3 | 2026-11-12 | Qingyu | §1.5 check-then-write rule (unique insert + `P2002`, lock then count) and lock order (questions before Session); §1.6 concurrent tests that are red first, spies instead of timing; §3.5 agent-drafted review comments; §5 Semgrep suppressions; §6.1 crypto randomness, safe redirects, escaping outside React, CDN integrity, Semgrep; JWT check is on first use, not at startup | Reviewing #15–#29 found the same race four times (registration and join-code 500s, a vote double-tap 500, a burst past the rate limit; #40, #42–#44), and locking the Session row first deadlocked with votes (#59), plus a backslash open redirect (#40), `Math.random` join codes (#43), unescaped Markdown export (#25) and CDN scripts without integrity (#26). CodeQL is skipped on the private repo, so Semgrep was added (#46) |
 | 2.2 | 2026-11-10 | Ruoyu | §1.6: wait for server-confirmed state in multi-context E2E; exact label matching; real-clock tokens in factories; lock rows for vote vs merge. §5: files are UTF-8 without BOM | Merge E2E exposed a lost-vote race (#9); the textarea locator collided with the vote button (#6); factory tokens signed at a fixed date would expire in CI; PowerShell `Set-Content` corrupted `§` in the schema and added BOMs |
 | 2.1 | 2026-11-10 | Ruoyu | Real time = SSE + `Session.version` instead of Pusher (§1.1, §1.3, §1.6); sprint dates moved to the Nov 13 deadline | No third-party secrets needed, so CI E2E and every preview can test real time; deadline is Nov 13 |
 | 2.0 | 2026-11-10 | Ruoyu | Ported HW3 v1.2 rules to HandUp: new context, architecture, naming, PRD §4 rules, visibility rules (§1.3, §5), two-context E2E rule, Pusher refetch-only payloads, single Next.js app instead of Express + Socket.IO | P2 project changed from TakeoutPick to HandUp; Vercel cannot host WebSockets and one deploy gives full-stack PR previews |
