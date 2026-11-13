@@ -6,5 +6,6 @@ export function downloadTextFile(filename: string, text: string, type: string): 
   link.href = url;
   link.download = filename;
   link.click();
-  URL.revokeObjectURL(url);
+  // Firefox and Safari may start the download after click() returns; revoking right away can cancel it (#61).
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }

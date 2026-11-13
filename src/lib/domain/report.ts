@@ -54,11 +54,20 @@ function formatUtc(date: Date): string {
   return `${date.toISOString().slice(0, 16).replace("T", " ")} UTC`;
 }
 
+// Guest text is untrusted: escape every character Markdown (and GitHub's raw HTML) gives meaning to, so a question
+// can't turn into a link, heading, emphasis or an HTML tag when the host opens the file (#61).
+const MARKDOWN_SPECIAL = /[\\`*_{}[\]()#+\-!<>|~]/g;
+
+export function escapeMarkdown(text: string): string {
+  return text.replace(MARKDOWN_SPECIAL, (ch) => `\\${ch}`);
+}
+
 function questionLines(list: ReportQuestion[]): string[] {
   if (list.length === 0) return ["_No questions._"];
   return list.map((q, i) => {
-    const body = q.body.replace(/\s+/g, " ").trim();
-    const extras = [q.status === "ANSWERED" ? "answered" : "", q.authorName ? `by ${q.authorName}` : ""].filter(Boolean);
+    const body = escapeMarkdown(q.body.replace(/\s+/g, " ").trim());
+    const name = q.authorName ? escapeMarkdown(q.authorName) : "";
+    const extras = [q.status === "ANSWERED" ? "answered" : "", name ? `by ${name}` : ""].filter(Boolean);
     return `${i + 1}. ${body} — ${q.votes} ${q.votes === 1 ? "vote" : "votes"}${extras.length ? ` (${extras.join(", ")})` : ""}`;
   });
 }
