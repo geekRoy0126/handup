@@ -2,6 +2,7 @@ import "server-only";
 
 import { ApiError } from "@/lib/api/http";
 import { db } from "@/lib/server/db";
+import { bumpSessionVersion } from "@/lib/server/realtime";
 
 import type { SessionRow } from "./access";
 
@@ -18,11 +19,16 @@ export async function addModerator(session: SessionRow, email: string, now: Date
   const user = await db.user.findUnique({ where: { email }, select: { id: true } });
   if (!user) throw new ApiError("NOT_FOUND", "No HandUp account with this email.");
   if (user.id === session.hostId) throw new ApiError("CONFLICT", "That's the host's own account.");
-  const row = await db.sessionModerator.upsert({
-    where: { sessionId_userId: { sessionId: session.id, userId: user.id } },
-    create: { sessionId: session.id, userId: user.id, addedAt: now },
-    update: {},
-    select,
+  // Bump the version so the new moderator's dashboard and every open console refetch (#62).
+  const row = await db.$transaction(async (tx) => {
+    const added = await tx.sessionModerator.upsert({
+      where: { sessionId_userId: { sessionId: session.id, userId: user.id } },
+      create: { sessionId: session.id, userId: user.id, addedAt: now },
+      update: {},
+      select,
+    });
+    await bumpSessionVersion(tx, session.id);
+    return added;
   });
   return toDto(row);
 }
@@ -33,5 +39,9 @@ export async function listModerators(session: SessionRow): Promise<ModeratorDto[
 }
 
 export async function removeModerator(session: SessionRow, userId: string): Promise<void> {
-  await db.sessionModerator.deleteMany({ where: { sessionId: session.id, userId } });
+  // A removed moderator's open console refetches at once and gets 403, instead of finding out on the next click (#62).
+  await db.$transaction(async (tx) => {
+    await tx.sessionModerator.deleteMany({ where: { sessionId: session.id, userId } });
+    await bumpSessionVersion(tx, session.id);
+  });
 }

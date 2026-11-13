@@ -3,31 +3,33 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/ui/error-state";
 import { FormError } from "@/components/ui/form-error";
 import { TextField } from "@/components/ui/text-field";
 import { apiFetch } from "@/lib/client/api-fetch";
 
 type Moderator = { userId: string; name: string; email: string };
 
+type LoadState = { kind: "loading" } | { kind: "error"; message: string } | { kind: "ready"; moderators: Moderator[] };
+
 export function ModeratorsPanel({ code }: { code: string }) {
-  const [moderators, setModerators] = useState<Moderator[]>([]);
+  const [list, setList] = useState<LoadState>({ kind: "loading" });
+  const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
 
-  const load = useCallback(async () => {
-    const result = await apiFetch<{ moderators: Moderator[] }>(`/api/v1/sessions/${code}/moderators`);
-    if (result.ok) setModerators(result.data.moderators);
-  }, [code]);
-
+  // Every list has loading, empty and error states (AGENTS.md §2, #62). `attempt` re-runs the load.
   useEffect(() => {
-    let active = true;
-    apiFetch<{ moderators: Moderator[] }>(`/api/v1/sessions/${code}/moderators`).then((result) => {
-      if (active && result.ok) setModerators(result.data.moderators);
-    });
-    return () => {
-      active = false;
-    };
-  }, [code]);
+    const controller = new AbortController();
+    apiFetch<{ moderators: Moderator[] }>(`/api/v1/sessions/${code}/moderators`, { signal: controller.signal })
+      .then((result) =>
+        setList(result.ok ? { kind: "ready", moderators: result.data.moderators } : { kind: "error", message: result.message }),
+      )
+      .catch(() => {});
+    return () => controller.abort();
+  }, [code, attempt]);
+
+  const load = useCallback(() => setAttempt((n) => n + 1), []);
 
   async function handleInvite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -35,12 +37,12 @@ export function ModeratorsPanel({ code }: { code: string }) {
     const result = await apiFetch(`/api/v1/sessions/${code}/moderators`, { body: { email } });
     if (!result.ok) return setError(result.message);
     setEmail("");
-    await load();
+    load();
   }
 
   async function remove(userId: string) {
     const result = await apiFetch(`/api/v1/sessions/${code}/moderators/${userId}`, { method: "DELETE" });
-    if (result.ok) await load();
+    if (result.ok) load();
     else setError(result.message);
   }
 
@@ -50,9 +52,11 @@ export function ModeratorsPanel({ code }: { code: string }) {
         Moderators
       </h2>
       <p className="text-sm text-ink-muted">Moderators can pin, answer, hide and merge questions. They need a HandUp account.</p>
-      {moderators.length > 0 && (
+      {list.kind === "loading" && <div aria-label="Loading moderators" className="h-10 animate-pulse rounded-lg bg-surface-muted" />}
+      {list.kind === "error" && <ErrorState message={list.message} onRetry={load} />}
+      {list.kind === "ready" && list.moderators.length > 0 && (
         <ul aria-label="Moderators" className="flex flex-col gap-2">
-          {moderators.map((m) => (
+          {list.moderators.map((m) => (
             <li key={m.userId} className="flex items-center gap-2 text-sm">
               <span className="flex-1">
                 <span className="font-medium">{m.name}</span> <span className="text-ink-muted">{m.email}</span>
