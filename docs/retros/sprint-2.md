@@ -24,3 +24,13 @@ Held on: YYYY-MM-DD · Attendees: Ruoyu Wang, Qingyu Cheng
 
 ## Action items for next sprint
 - [ ]
+
+---
+
+## Facts to start the discussion (from git, CI and the AI usage log)
+
+- Planned: #8–#14, 22 points. Code for all of them finished with test-first commits.
+- Bugs caught by tests before merge: a vote cast while a question was being merged could be lost (fixed with row
+  locks + a concurrent regression test); a guest page joined twice and created duplicate guests (found by the
+  screenshot run).
+- Rules file updated to v2.2 with five lessons (see AGENTS.md §8).

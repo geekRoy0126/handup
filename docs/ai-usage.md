@@ -28,3 +28,18 @@ how the rules evolved. Add an entry for every issue (2–5 lines is enough).
 | --- | --- | --- | --- | --- | --- |
 | 2026-11-10 | Ruoyu | #1 | Ported HW3 rules to HandUp, drafted PRD rules, schema and CI workflows | Chose a single Next.js app over Express + Socket.IO for full-stack previews | AGENTS.md v2.0 |
 | 2026-11-10 | Ruoyu | #1 | Replaced Pusher with SSE + version counter | Removes third-party secrets so CI can test real time | AGENTS.md v2.1 |
+| 2026-11-10 | Ruoyu | #1 | Fixed CI: regenerated the lockfile on Linux (npm optional-dependency bug), gitleaks permissions, GHAS jobs only on public repos | A lockfile built on Windows broke `npm ci` on Linux | — |
+| 2026-11-10 | Ruoyu | #3 | Failing tests for tokens, validation, auth routes and E2E first; then jose/bcrypt auth, cookies, proxy | jose fails under jsdom → `@vitest-environment node`; Next's route announcer also has `role=alert` → narrowed the locator | — |
+| 2026-11-10 | Ruoyu | #4 | Join-code domain with injected randomness; access helpers; sessions API and UI | Guests calling staff endpoints got 401 but the PRD says 403 → `denied()` tells them apart | — |
+| 2026-11-10 | Ruoyu | #5 | `toQuestionView` visibility function, database rate limit, join/ask routes, guest board | A test helper read a response body twice; E2E timeouts under `next dev` + bcrypt → 15 s expect timeout | — |
+| 2026-11-10 | Ruoyu | #6 | `rankQuestions`, vote toggle, `Session.version` migration, SSE route and hook | Factory tokens were signed at the fixed test date and would expire in CI → real clock | v2.2 |
+| 2026-11-10 | Ruoyu | #7–#8 | Pure `planQuestionAction`; moderators API and panel; hide/unhide | — | — |
+| 2026-11-10 | Ruoyu | #9 | `mergeVotes` and the merge route | The E2E exposed a race (a vote cast during a merge was lost). The first fix (SERIALIZABLE) was rejected on review because every vote updates the same session row → row locks + a concurrent regression test | v2.2 |
+| 2026-11-10 | Ruoyu | #10 | Largest-remainder poll results, polls API, host panel and guest card | — | — |
+| 2026-11-10 | Ruoyu | #11–#12 | Report builder + Markdown; hash-only API keys, public API with CORS, generated OpenAPI 3.1, Swagger UI | Added an OpenAPI coverage test so new routes cannot go undocumented | — |
+| 2026-11-10 | Ruoyu | #13–#14 | axe checks, large-text mode, README screenshots captured with Playwright | Screenshots showed duplicate guests (StrictMode joined twice) → `joinOnce` fix | — |
+
+## Lessons that changed the rules file
+
+See AGENTS.md §8 (v2.1, v2.2): SSE instead of Pusher; wait for server-confirmed state in multi-browser E2E; exact
+label locators; real-clock tokens in test factories; row locks for concurrent writes; UTF-8 without BOM.

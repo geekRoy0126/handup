@@ -15,6 +15,19 @@ import { useQuestions } from "@/lib/client/use-questions";
 import { useSessionEvents } from "@/lib/client/use-session-events";
 import { useSessionInfo } from "@/lib/client/use-session-info";
 
+// One join request per code at a time: StrictMode (and fast remounts) would otherwise create two guests.
+const pendingJoins = new Map<string, ReturnType<typeof apiFetch>>();
+
+function joinOnce(code: string) {
+  let pending = pendingJoins.get(code);
+  if (!pending) {
+    pending = apiFetch(`/api/v1/sessions/${code}/join`, { method: "POST" });
+    pendingJoins.set(code, pending);
+    void pending.finally(() => setTimeout(() => pendingJoins.delete(code), 1000));
+  }
+  return pending;
+}
+
 type JoinState = { kind: "joining" } | { kind: "joined" } | { kind: "error"; message: string };
 
 export function GuestBoard() {
@@ -32,7 +45,7 @@ export function GuestBoard() {
   });
 
   useEffect(() => {
-    apiFetch(`/api/v1/sessions/${code}/join`, { method: "POST" }).then((result) =>
+    joinOnce(code).then((result) =>
       setJoin(result.ok ? { kind: "joined" } : { kind: "error", message: result.message }),
     );
   }, [code]);

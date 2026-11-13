@@ -192,6 +192,14 @@ No default exports except Next special files. No `I` prefix on types. No abbrevi
   increased after a write that others must see. Use `tests/integration/helpers.ts` (`resetDb`, factories).
 - E2E real-time tests: open `browser.newContext()` twice (host + guest, or two guests), act in one, `expect` in the
   other with the default timeout — never `waitForTimeout`.
+- **Before acting in another context, wait for server-confirmed state, not optimistic UI.** A vote button flips
+  instantly; wait until the *other* screen shows the new count (it arrived over SSE) before e.g. merging.
+- Locate inputs with `getByLabel("…", { exact: true })` when a button's accessible name contains the same words
+  (the vote button "Your question, 0 votes" also matched the textarea "Your question").
+- Integration factories sign tokens with the real clock (`new Date()`): route handlers verify with the real clock,
+  so tokens signed at `TEST_NOW` would expire and break CI days later.
+- Two writes that touch the same question row (vote and merge) lock it first with `lockQuestions(tx, ids)` and
+  re-read inside the transaction. Add a concurrent `Promise.all` regression test for any new write of this kind.
 - Coverage: ≥ 80% lines, branches and functions on `src/lib/domain` (enforced in `vitest.config.mts`).
 - Commands: `npm test` (unit) · `npm run test:int` · `npm run test:e2e` · `npm run test:coverage`.
 
@@ -275,6 +283,8 @@ Never put tests and implementation in one commit. Never weaken or delete a test 
 - Don't add `.skip`/`.only`, disable lint rules, or lower coverage thresholds to get CI green.
 - Don't edit `src/generated/**` or migrations that are already on `main`.
 - Don't commit `.env`, secrets, API keys or tokens; never log passwords, JWTs or raw API keys.
+- Don't write source files with Windows PowerShell `Set-Content`/`Out-File`: they add a BOM or replace non-ASCII
+  characters (`§`, `–`) with `?`. Files are UTF-8 without BOM, LF line endings (`.gitattributes`).
 
 ## 6. Security and accessibility requirements
 
@@ -315,6 +325,7 @@ Never put tests and implementation in one commit. Never weaken or delete a test 
 
 | Version | Date | Author | Change | Why |
 | --- | --- | --- | --- | --- |
+| 2.2 | 2026-11-10 | Ruoyu | §1.6: wait for server-confirmed state in multi-context E2E; exact label matching; real-clock tokens in factories; lock rows for vote vs merge. §5: files are UTF-8 without BOM | Merge E2E exposed a lost-vote race (#9); the textarea locator collided with the vote button (#6); factory tokens signed at a fixed date would expire in CI; PowerShell `Set-Content` corrupted `§` in the schema and added BOMs |
 | 2.1 | 2026-11-10 | Ruoyu | Real time = SSE + `Session.version` instead of Pusher (§1.1, §1.3, §1.6); sprint dates moved to the Nov 13 deadline | No third-party secrets needed, so CI E2E and every preview can test real time; deadline is Nov 13 |
 | 2.0 | 2026-11-10 | Ruoyu | Ported HW3 v1.2 rules to HandUp: new context, architecture, naming, PRD §4 rules, visibility rules (§1.3, §5), two-context E2E rule, Pusher refetch-only payloads, single Next.js app instead of Express + Socket.IO | P2 project changed from TakeoutPick to HandUp; Vercel cannot host WebSockets and one deploy gives full-stack PR previews |
 | 1.2 | 2026-10-30 | Ruoyu | Real-clock exception for route-handler integration tests, with a 1 h margin | HW3 v1.1 run: "route owns `now`" contradicted "never the real clock" |
