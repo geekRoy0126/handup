@@ -110,9 +110,10 @@ Owner = who implements it; the other partner reviews the PR. Due date: 2026-11-1
 - [ ] `AGENTS.md`, `docs/PRD.md`, `docs/ui-spec.md` committed; full Prisma schema with the first migration
 - [ ] CI workflow (lint, typecheck, unit, integration, build, E2E) and security workflow committed
 
-**[#2] Deploy: Vercel + Neon + environments + preview E2E** · chore · 3 pts · Ruoyu
-- [ ] Vercel project linked to the repo: every PR gets a preview URL, `main` deploys to production
-- [ ] Neon Vercel integration: each preview gets its own database branch; `vercel-build` runs migrations
+**[#2] Deploy: production + PR previews + environments + preview E2E** · chore · 3 pts · Ruoyu
+_Changed on 2026-11-13: deployed to the team's own VPS instead of Vercel + Neon (see `docs/setup-deploy.md`)._
+- [ ] ~~Vercel project linked to the repo~~ → `deploy.yml`: every PR gets a preview URL, `main` deploys to production
+- [ ] ~~Neon branch per preview~~ → the preview gets a fresh database on every deploy; migrations run on every deploy
 - [ ] Environment variables set separately for Development / Preview / Production; documented in
       `docs/setup-deploy.md`
 - [ ] Playwright smoke tests run against the preview URL on every PR (`e2e-preview.yml`) and pass

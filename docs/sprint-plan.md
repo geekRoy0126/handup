@@ -18,7 +18,7 @@ below are as of Nov 12.
 | Issue | Points | Status |
 | --- | --- | --- |
 | #1 Scaffold, rules file and PRD | 2 | Done, PR #15 merged |
-| #2 Deploy: Vercel + Neon + environments + preview E2E | 3 | Open: config in PR #29; the repo owner must import it into Vercel. No deployment yet |
+| #2 Deploy: production + PR previews (VPS) | 3 | Done on Nov 13 (PRs #29, #74): production and PR previews deploy automatically from GitHub Actions |
 | #3 US1 Host account | 3 | Done, PR #17 merged |
 | #4 US2 Create session with join code | 3 | Done, PR #18 merged |
 | #5 US3 Join and ask | 3 | Done, PR #19 merged |
@@ -64,5 +64,6 @@ below are as of Nov 12.
 
 ## Decisions
 
-- Single Next.js app on Vercel + Neon instead of Express + Socket.IO + Railway (see `docs/architecture.md`).
+- Single Next.js app instead of Express + Socket.IO + Railway (see `docs/architecture.md`).
+- Nov 13: deployed to our own VPS (systemd + Caddy) instead of Vercel + Neon; previews use one slot with a fresh database.
 - Real time with Server-Sent Events + a version counter in Postgres instead of Pusher (PRD §4.7).

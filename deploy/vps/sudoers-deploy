@@ -1,0 +1,2 @@
+# /etc/sudoers.d/handup-deploy (root:root 440). The GitHub Actions `deploy` user may run only the release script.
+deploy ALL=(root) NOPASSWD: /usr/local/bin/handup-release

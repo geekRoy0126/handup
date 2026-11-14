@@ -4,8 +4,7 @@
 #   2. integration  Vitest against a real Postgres service container   }
 #   3. build        production build
 #   4. e2e          Playwright against the production build (CI Postgres)
-# Deploys are done by Vercel's Git integration (preview per PR, production on main);
-# e2e-deployed.yml then tests each deployed URL.
+# Deployment is deploy.yml (PR preview slot, production on main), which runs @smoke against the deployed URL.
 name: CI
 
 on:

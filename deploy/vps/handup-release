@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Installs a HandUp release on the VPS. Installed as /usr/local/bin/handup-release (root:root 755).
+# The `deploy` user (GitHub Actions) may run only this command with sudo, see deploy/vps/sudoers-deploy.
+#
+#   handup-release production <tarball> <release>   install /tmp/handup-*.tgz as /opt/handup, restart `handup`
+#   handup-release preview    <tarball> <release>   same for the PR preview slot (/opt/handup-preview, port 3001)
+#   handup-release reset-preview-db                 give the next PR preview an empty database
+set -euo pipefail
+
+usage() { echo "usage: handup-release production|preview <tarball> <release> | reset-preview-db" >&2; exit 2; }
+
+case "${1:-}" in
+  reset-preview-db)
+    systemctl stop handup-preview 2>/dev/null || true
+    sudo -u postgres dropdb --if-exists --force handup_preview
+    sudo -u postgres createdb --owner handup_preview handup_preview
+    echo "preview database reset"
+    exit 0
+    ;;
+  production) ROOT=/opt/handup; SERVICE=handup; PORT=3000 ;;
+  preview) ROOT=/opt/handup-preview; SERVICE=handup-preview; PORT=3001 ;;
+  *) usage ;;
+esac
+
+TARBALL="${2:-}"
+RELEASE="${3:-}"
+# Only accept a tarball the deploy user uploaded to /tmp and a plain release name: no paths, no options.
+[[ "$TARBALL" =~ ^/tmp/handup-[A-Za-z0-9._-]+\.tgz$ && -f "$TARBALL" ]] || usage
+[[ "$RELEASE" =~ ^[A-Za-z0-9._-]{1,80}$ ]] || usage
+
+DEST="$ROOT/releases/$RELEASE"
+mkdir -p "$DEST"
+tar --no-same-owner -xzf "$TARBALL" -C "$DEST"
+rm -f "$TARBALL"
+mkdir -p "$DEST/.next/cache"
+chown -R handup:handup "$DEST"
+ln -sfn "$DEST" "$ROOT/current"
+systemctl restart "$SERVICE"
+ls -1dt "$ROOT"/releases/* | tail -n +4 | xargs -r rm -rf   # keep the 3 newest releases
+
+for _ in $(seq 1 30); do
+  if curl -fsS "http://127.0.0.1:$PORT/api/v1/health" >/dev/null 2>&1; then
+    echo "$SERVICE is up: $RELEASE"
+    exit 0
+  fi
+  sleep 1
+done
+echo "$SERVICE did not become healthy" >&2
+journalctl -u "$SERVICE" -n 30 --no-pager >&2
+exit 1
