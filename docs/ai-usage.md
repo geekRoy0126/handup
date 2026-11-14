@@ -38,6 +38,16 @@ how the rules evolved. Add an entry for every issue (2–5 lines is enough).
 | 2026-11-10 | Ruoyu | #10 | Largest-remainder poll results, polls API, host panel and guest card | — | — |
 | 2026-11-10 | Ruoyu | #11–#12 | Report builder + Markdown; hash-only API keys, public API with CORS, generated OpenAPI 3.1, Swagger UI | Added an OpenAPI coverage test so new routes cannot go undocumented | — |
 | 2026-11-10 | Ruoyu | #13–#14 | axe checks, large-text mode, README screenshots captured with Playwright | Screenshots showed duplicate guests (StrictMode joined twice) → `joinOnce` fix | — |
+| 2026-11-12 | Qingyu | Reviews of PRs #15, #17–#29 | Claude Code (with AGENTS.md) read each PR diff and drafted line comments; I chose which to post | Checked every comment's line number against the PR head before posting; several were off by one and moved | — |
+| 2026-11-12 | Qingyu | #40 | Failing tests first: backslash redirect, vote button while pending, 5 concurrent toggles; then the fixes | The concurrent test reproduced the bug on the first run ([200, 500, 500, 200, 500]) before any fix | — |
+| 2026-11-12 | Qingyu | #42 | Concurrent-registration test and a bcrypt spy for unknown emails; then the P2002 catch and dummy hash | Chose a spy on `verifyPassword` over measuring milliseconds, which would be flaky in CI | — |
+| 2026-11-12 | Qingyu | #43 | Tests for secure join codes and a concurrent code collision; then `node:crypto` and insert-as-check | The first race test deleted its own host in `resetDb()` and failed for the wrong reason; caught and fixed before pushing | — |
+| 2026-11-12 | Qingyu | #44 | Burst test (8 questions at once all got 201); then a per-guest row lock | Same row-lock idea as `lockQuestions` (#9), applied to the Guest row | — |
+| 2026-11-12 | Qingyu | #45 | Fake `EventSource` and stubbed clipboard tests; then the first-`ready` refetch and honest copy feedback | First fix announced the failure twice (visible text + live region); the test caught it | — |
+| 2026-11-12 | Qingyu | #46 | Semgrep job and E2E build reuse; ran Semgrep locally in Docker | Checked the 5 first findings by hand: 4 test fixtures, 1 cookie name mistaken for a username → ignore file + `nosemgrep` with the reason | — |
+| 2026-11-12 | Qingyu | #41 | Merged `main` after #24 and resolved the `vote-service.ts` conflict | Kept both: #24's row lock and re-read, then #40's safe toggle; re-ran votes and merge tests | — |
+
+Note: Qingyu's work used Claude Code rather than Antigravity; both read the same `AGENTS.md`.
 
 ## Lessons that changed the rules file
 
