@@ -1,6 +1,8 @@
 import "server-only";
 
 // Cookie names and helpers shared by every route handler that signs someone in or out.
+// A cookie name, not a credential: njsscan flags any "USER" constant assigned a string.
+// nosemgrep: ajinabraham.njsscan.generic.hardcoded_secrets.node_username
 export const USER_COOKIE = "hu_session";
 export const GUEST_COOKIE = "hu_guest";
 
