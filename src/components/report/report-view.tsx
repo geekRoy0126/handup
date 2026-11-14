@@ -10,6 +10,7 @@ import { AppHeader } from "@/components/ui/app-header";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/client/api-fetch";
 import { downloadTextFile } from "@/lib/client/download-file";
 import { useCurrentUser } from "@/lib/client/use-current-user";
@@ -79,7 +80,7 @@ export function ReportView() {
     <>
       <AppHeader user={user} />
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-4 py-8">
-        {state.kind === "loading" && <div aria-label="Loading report" className="h-64 animate-pulse rounded-xl bg-surface-muted" />}
+        {state.kind === "loading" && <Skeleton label="Loading report" className="h-64" />}
         {state.kind === "error" && <ErrorState message={state.message} />}
         {state.kind === "ready" && (
           <>

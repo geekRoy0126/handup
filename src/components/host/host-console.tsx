@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { QuestionList } from "@/components/questions/question-list";
 import { VoteCount } from "@/components/questions/vote-button";
 import { ErrorState } from "@/components/ui/error-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/client/api-fetch";
 import { useCurrentUser } from "@/lib/client/use-current-user";
 import { usePolls } from "@/lib/client/use-polls";
@@ -50,7 +51,7 @@ export function HostConsole() {
         data-large-text={isLargeText}
         className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-4 py-8 data-[large-text=true]:max-w-none"
       >
-        {state.kind === "loading" && <div aria-label="Loading session" className="h-48 animate-pulse rounded-xl bg-surface-muted" />}
+        {state.kind === "loading" && <Skeleton label="Loading session" className="h-48" />}
         {state.kind === "error" && <ErrorState message={state.message} onRetry={reload} />}
         {state.kind === "ready" && state.role !== "HOST" && state.role !== "MODERATOR" && (
           <ErrorState message="Only the host and moderators of this session can open its console." />
@@ -75,7 +76,7 @@ export function HostConsole() {
             {actionError && <ErrorState message={actionError} />}
             <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
               <section aria-label="Questions" className="flex flex-col gap-4">
-                {board.kind === "loading" && <div aria-label="Loading questions" className="h-32 animate-pulse rounded-xl bg-surface-muted" />}
+                {board.kind === "loading" && <Skeleton label="Loading questions" className="h-32" />}
                 {board.kind === "error" && <ErrorState message={board.message} onRetry={reloadBoard} />}
                 {board.kind === "ready" && (
                   <QuestionList

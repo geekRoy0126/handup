@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/client/api-fetch";
 import { formatJoinCode } from "@/lib/domain/join-code";
 
@@ -37,7 +38,7 @@ export function SessionList() {
   }, [attempt]);
 
   if (state.kind === "loading") {
-    return <div aria-label="Loading sessions" className="h-40 animate-pulse rounded-xl bg-surface-muted" />;
+    return <Skeleton label="Loading sessions" className="h-40" />;
   }
   if (state.kind === "error") return <ErrorState message={state.message} onRetry={() => setAttempt((n) => n + 1)} />;
   if (state.sessions.length === 0) {
