@@ -26,13 +26,15 @@ export async function toggleVote(
     await lockQuestions(tx, [question.id]);
     const current = await tx.question.findUniqueOrThrow({ where: { id: question.id }, select: { status: true, isHidden: true } });
     if (notVotable(current)) throw new ApiError("CONFLICT", "This question can't be voted on anymore.");
-    const key = { questionId_guestId: { questionId: question.id, guestId } };
-    const existing = await tx.vote.findUnique({ where: key, select: { guestId: true } });
-    if (existing) await tx.vote.delete({ where: key });
-    else await tx.vote.create({ data: { questionId: question.id, guestId } });
+    const where = { questionId: question.id, guestId };
+    // deleteMany + createMany(skipDuplicates) never throw on a concurrent toggle: two requests that both find
+    // no vote both insert, and the second insert is a no-op (ON CONFLICT DO NOTHING) instead of a 500 (#40).
+    const removed = await tx.vote.deleteMany({ where });
+    const voted = removed.count === 0;
+    if (voted) await tx.vote.createMany({ data: [where], skipDuplicates: true });
     await bumpSessionVersion(tx, session.id);
     const votes = await tx.vote.count({ where: { questionId: question.id } });
-    return { voted: !existing, votes };
+    return { voted, votes };
   });
 }
 

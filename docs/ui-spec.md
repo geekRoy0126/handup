@@ -6,14 +6,15 @@ Calm and focused: one indigo brand color, cool greys, generous white space, roun
 
 | Token | Use | Verified small-text pairs (≥ 4.5 : 1) |
 | --- | --- | --- |
-| `brand-600` | Primary buttons, focus ring, links | `text-white` on `bg-brand-600`; `text-brand-600` on `bg-surface` |
+| `brand-600` | Primary buttons, focus ring, links | `text-on-brand` on `bg-brand-600`; `text-brand-600` on `bg-surface` |
 | `status-pinned` | "Now answering" tag and pinned card border | `text-status-pinned` on `bg-surface` / `bg-surface-muted` |
 | `status-answered` | "Answered" tag | `text-status-answered` on `bg-surface` / `bg-surface-muted` |
 | `status-hidden` | "Hidden" tag (staff only) | `text-status-hidden` on `bg-surface` |
-| `danger` | Destructive actions, errors | `text-danger` on `bg-surface`; `text-white` on `bg-danger` |
+| `danger` | Destructive actions, errors | `text-danger` on `bg-surface`; `text-on-danger` on `bg-danger` |
+| `on-brand`, `on-danger` | Text on a brand or danger background (white in light mode, dark in dark mode) | on `bg-brand-600` / `bg-danger` |
 | `ink`, `ink-muted` | Body text, secondary text | on `bg-surface` / `bg-surface-muted` |
 
-Never lower text contrast with `opacity-*`. Status is always color **plus** a word or icon.
+Every pair is verified in light **and** dark mode (axe runs in both, #58). Never lower text contrast with `opacity-*`. Status is always color **plus** a word or icon.
 
 ## 2. Screens
 

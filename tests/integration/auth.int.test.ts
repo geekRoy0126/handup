@@ -53,6 +53,12 @@ describe("POST /api/v1/auth/register", () => {
     expect((await readJson(res)).error?.message).toBe("An account with this email already exists.");
   });
 
+  it("answers one 201 and one 409, never a 500, when the same email registers twice at once (#42)", async () => {
+    const statuses = (await Promise.all([registerAlice(), registerAlice()])).map((r) => r.status).sort();
+    expect(statuses).toEqual([201, 409]);
+    expect(await db.user.count({ where: { email: alice.email } })).toBe(1);
+  });
+
   it("rejects a password shorter than 8 characters with 422", async () => {
     const res = await register(
       jsonRequest("/api/v1/auth/register", { body: { ...alice, password: "1234567" } }),

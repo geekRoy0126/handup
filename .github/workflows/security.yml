@@ -1,4 +1,5 @@
-# Security scanning on every PR, on main, and weekly.
+# Security scanning on every PR, on main, and weekly: npm audit, gitleaks, Semgrep, and (once public) CodeQL
+# and dependency review.
 name: Security
 
 on:
@@ -36,6 +37,19 @@ jobs:
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  semgrep:
+    name: SAST (Semgrep)
+    # Runs on private repos too (no GitHub Advanced Security needed), so PRs get static analysis while
+    # CodeQL is skipped (#46). Rules: TypeScript, React, Node.js (njsscan) and secrets. Fails on any finding.
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep:1.184.0
+    steps:
+      - uses: actions/checkout@v4
+      - run: >-
+          semgrep scan --error --metrics=off
+          --config p/typescript --config p/react --config p/nodejsscan --config p/secrets
 
   dependency-review:
     name: Dependency review

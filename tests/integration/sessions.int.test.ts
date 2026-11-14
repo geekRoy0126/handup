@@ -1,17 +1,20 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST as endSession } from "@/app/api/v1/sessions/[code]/end/route";
 import { GET as getSession } from "@/app/api/v1/sessions/[code]/route";
 import { GET as listSessions, POST as createSessionRoute } from "@/app/api/v1/sessions/route";
 import { createSession } from "@/lib/server/services/session-service";
 
-import { createUser } from "./factories";
+import { createGuest, createUser } from "./factories";
 import { ctx, jsonRequest, readJson, resetDb, TEST_NOW } from "./helpers";
 
 type SessionDto = { code: string; title: string; status: string; endedAt: string | null; role?: string };
 type SessionBody = { data: { session: SessionDto } };
 
 beforeEach(resetDb);
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 async function create(token: string, title = "CS6983 Lecture 9") {
   return createSessionRoute(jsonRequest("/api/v1/sessions", { bearer: token, body: { title } }));
@@ -49,6 +52,32 @@ describe("POST /api/v1/sessions", () => {
     const second = await createSession({ hostId: host.user.id, title: "Second" }, TEST_NOW, () => values[i++] ?? 0.5);
     expect(first.code).toBe("AAAAAA");
     expect(second.code).not.toBe("AAAAAA");
+  });
+
+  it("draws join codes from a secure source, not Math.random, by default (#43)", async () => {
+    const host = await createUser();
+    // If codes came from Math.random, pinning it to 0 would always give "AAAAAA" (other libraries may still call it).
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const session = await createSession({ hostId: host.user.id, title: "Secure" }, TEST_NOW);
+    expect(session.code).toMatch(/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/);
+    expect(session.code).not.toBe("AAAAAA");
+  });
+
+  it("draws again instead of failing when a concurrent create takes the same code (#43)", async () => {
+    // Each pair draws AAAAAA first, then a different code; whichever insert loses the race must retry.
+    const drawThen = (next: number) => {
+      let i = 0;
+      return () => (i++ < 6 ? 0 : next);
+    };
+    for (const [a, b] of [[0.3, 0.6], [0.35, 0.65], [0.4, 0.7]] as const) {
+      await resetDb();
+      const host = await createUser();
+      const results = await Promise.allSettled([
+        createSession({ hostId: host.user.id, title: "A" }, TEST_NOW, drawThen(a)),
+        createSession({ hostId: host.user.id, title: "B" }, TEST_NOW, drawThen(b)),
+      ]);
+      expect(results.map((r) => r.status)).toEqual(["fulfilled", "fulfilled"]);
+    }
   });
 });
 
@@ -112,6 +141,21 @@ describe("POST /api/v1/sessions/[code]/end", () => {
     const other = await createUser("Other");
     const code = await createCode(host.token);
     const req = jsonRequest(`/api/v1/sessions/${code}/end`, { method: "POST", bearer: other.token });
+    expect((await endSession(req, ctx({ code }))).status).toBe(403);
+  });
+
+  it("answers 401 without a token (#40)", async () => {
+    const host = await createUser();
+    const code = await createCode(host.token);
+    const req = jsonRequest(`/api/v1/sessions/${code}/end`, { method: "POST" });
+    expect((await endSession(req, ctx({ code }))).status).toBe(401);
+  });
+
+  it("answers 403 for a guest of this session (#40)", async () => {
+    const host = await createUser();
+    const code = await createCode(host.token);
+    const guest = await createGuest(code);
+    const req = jsonRequest(`/api/v1/sessions/${code}/end`, { method: "POST", cookie: guest.cookie });
     expect((await endSession(req, ctx({ code }))).status).toBe(403);
   });
 });

@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Page } from "@playwright/test";
 
 import { createSessionFromDashboard, registerHost } from "./helpers";
 
@@ -10,30 +10,48 @@ async function expectNoSeriousViolations(page: Page, label: string) {
   expect(serious.map((v) => `${label}: ${v.id} (${v.nodes.length})`)).toEqual([]);
 }
 
-test("main pages have no serious accessibility violations", async ({ page, browser }) => {
+/** Visits every main page as host and guest, with a pinned question, and runs axe on each (#13, #58). */
+async function checkMainPages(page: Page, browser: Browser, colorScheme: "light" | "dark") {
+  const tag = (label: string) => `${label} (${colorScheme})`;
   await page.goto("/");
-  await expectNoSeriousViolations(page, "home");
+  await expectNoSeriousViolations(page, tag("home"));
   await page.goto("/login");
-  await expectNoSeriousViolations(page, "login");
+  await expectNoSeriousViolations(page, tag("login"));
 
   await registerHost(page);
-  await expectNoSeriousViolations(page, "dashboard");
+  await expectNoSeriousViolations(page, tag("dashboard"));
   const code = await createSessionFromDashboard(page, "Accessibility check");
 
-  const guestContext = await browser.newContext();
+  const guestContext = await browser.newContext({ colorScheme });
   const guest = await guestContext.newPage();
   await guest.goto(`/join/${code}`);
   await guest.getByLabel("Your question", { exact: true }).fill("Is the board accessible?");
   await guest.getByRole("button", { name: "Ask" }).click();
   await expect(guest.getByRole("article", { name: "Is the board accessible?" })).toBeVisible();
-  await expectNoSeriousViolations(guest, "guest board");
 
-  await expect(page.getByRole("article", { name: "Is the board accessible?" })).toBeVisible();
-  await expectNoSeriousViolations(page, "host console");
+  // Pin it so the "Now answering" status colour is on screen for both views.
+  const hostCard = page.getByRole("article", { name: "Is the board accessible?" });
+  await hostCard.getByRole("button", { name: "Pin" }).click();
+  await expect(guest.getByText("Now answering")).toBeVisible();
+  await expectNoSeriousViolations(guest, tag("guest board"));
+  await expectNoSeriousViolations(page, tag("host console"));
+
   await page.getByRole("link", { name: "View report" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  await expectNoSeriousViolations(page, "report");
+  await expectNoSeriousViolations(page, tag("report"));
   await guestContext.close();
+}
+
+test("main pages have no serious accessibility violations", async ({ page, browser }) => {
+  await checkMainPages(page, browser, "light");
+});
+
+test.describe("in dark mode (#58)", () => {
+  test.use({ colorScheme: "dark" });
+
+  test("main pages have no serious accessibility violations", async ({ page, browser }) => {
+    await checkMainPages(page, browser, "dark");
+  });
 });
 
 test("host can switch the console to large text for a projector", async ({ page }) => {

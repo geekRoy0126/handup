@@ -6,6 +6,7 @@ import { db } from "@/lib/server/db";
 import { getSessionVersion } from "@/lib/server/realtime";
 import { findSessionByCode } from "@/lib/server/services/access";
 import { askQuestion } from "@/lib/server/services/question-service";
+import { endSession } from "@/lib/server/services/session-service";
 
 import { createGuest, createLiveSession } from "./factories";
 import { ctx, jsonRequest, readJson, resetDb, TEST_NOW } from "./helpers";
@@ -55,6 +56,23 @@ describe("POST /api/v1/questions/[id]/vote", () => {
     const target = await askQuestion(session, author.guestId, { body: "Another one", isAnonymous: true }, TEST_NOW);
     await db.question.update({ where: { id: question.id }, data: { isHidden: false, status: "MERGED", mergedIntoId: target.id } });
     expect((await voteAs(question.id, voter.cookie)).status).toBe(409);
+  });
+
+  it("answers 409 once the session has ended (#40)", async () => {
+    const { question, voter, session } = await setup();
+    await endSession(session, TEST_NOW);
+    const res = await voteAs(question.id, voter.cookie);
+    expect(res.status).toBe(409);
+    expect((await readJson(res)).error?.message).toBe("This session has ended.");
+  });
+
+  it("never answers 500 when the same guest votes twice at once, and counts at most one vote (#40)", async () => {
+    const { question, voter } = await setup();
+    // A double-tap on a phone sends two requests before the first one commits.
+    const responses = await Promise.all(Array.from({ length: 5 }, () => voteAs(question.id, voter.cookie)));
+    expect(responses.map((r) => r.status)).toEqual([200, 200, 200, 200, 200]);
+    const stored = await db.vote.count({ where: { questionId: question.id } });
+    expect(stored).toBeLessThanOrEqual(1);
   });
 
   it("answers 404 for an unknown question", async () => {
