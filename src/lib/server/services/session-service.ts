@@ -3,6 +3,7 @@ import "server-only";
 import { ApiError } from "@/lib/api/http";
 import { generateJoinCode } from "@/lib/domain/join-code";
 import { db } from "@/lib/server/db";
+import { lockSessionForStaffWrite } from "@/lib/server/locks";
 import { isUniqueViolation } from "@/lib/server/prisma-errors";
 import { bumpSessionVersion } from "@/lib/server/realtime";
 import { secureRandom } from "@/lib/server/secure-random";
@@ -63,6 +64,10 @@ export async function getSessionDto(session: SessionRow): Promise<SessionDto> {
 export async function endSession(session: SessionRow, now: Date): Promise<SessionDto> {
   if (session.status === "ENDED") return getSessionDto(session);
   return db.$transaction(async (tx) => {
+    // Takes the staff lock so no poll launch or staff action slips in while the session ends, and closes the open
+    // poll in the same transaction: an ended session is final (PRD §4.5, #60).
+    await lockSessionForStaffWrite(tx, session.id);
+    await tx.poll.updateMany({ where: { sessionId: session.id, status: "OPEN" }, data: { status: "CLOSED", closedAt: now } });
     await bumpSessionVersion(tx, session.id);
     return tx.session.update({ where: { id: session.id }, data: { status: "ENDED", endedAt: now }, select: dtoSelect });
   });

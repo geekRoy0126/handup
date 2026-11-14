@@ -7,6 +7,7 @@ import { db } from "@/lib/server/db";
 import { getSessionVersion } from "@/lib/server/realtime";
 import { findSessionByCode } from "@/lib/server/services/access";
 import { askQuestion } from "@/lib/server/services/question-service";
+import { endSession } from "@/lib/server/services/session-service";
 
 import { createGuest, createLiveSession } from "./factories";
 import { ctx, jsonRequest, readJson, resetDb, TEST_NOW } from "./helpers";
@@ -97,5 +98,14 @@ describe("a vote cast while the question is being merged (found by E2E, #9)", ()
       if (voteRes.status === 200) expect(bobVotedTarget).toBe(1);
       else expect(voteRes.status).toBe(409);
     }
+  });
+});
+
+describe("merging on an ended session (#60)", () => {
+  it("answers 409 and leaves both questions as they were", async () => {
+    const { hostToken, target, source, session } = await setup();
+    await endSession(session, TEST_NOW);
+    expect((await mergeAs(source.id, target.id, { bearer: hostToken })).status).toBe(409);
+    expect((await db.question.findUniqueOrThrow({ where: { id: source.id } })).status).toBe("OPEN");
   });
 });
