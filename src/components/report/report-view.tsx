@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { apiFetch } from "@/lib/client/api-fetch";
+import { downloadTextFile } from "@/lib/client/download-file";
 import { useCurrentUser } from "@/lib/client/use-current-user";
 import { renderReportMarkdown, type Report, type ReportQuestion } from "@/lib/domain/report";
 
@@ -31,13 +32,7 @@ function reviveReport(json: ReportJson): Report {
 }
 
 function downloadMarkdown(report: Report) {
-  const blob = new Blob([renderReportMarkdown(report)], { type: "text/markdown;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `handup-${report.session.code}-report.md`;
-  link.click();
-  URL.revokeObjectURL(url);
+  downloadTextFile(`handup-${report.session.code}-report.md`, renderReportMarkdown(report), "text/markdown;charset=utf-8");
 }
 
 function QuestionTable({ id, title, questions }: { id: string; title: string; questions: ReportQuestion[] }) {

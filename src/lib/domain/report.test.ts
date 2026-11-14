@@ -99,6 +99,21 @@ describe("renderReportMarkdown", () => {
     expect(md).toContain("- RAG: 2 (100%)");
   });
 
+  it("escapes Markdown in guest text, so a question can't become a link, heading or HTML (#61)", () => {
+    const tricky = q("x", {
+      body: "[slides here](https://evil.example) <img src=x onerror=alert(1)> # not a heading *bold*",
+      isAnonymous: false,
+      authorName: "**Sam**",
+      voterIds: votes(1),
+    });
+    const md = renderReportMarkdown(buildReport(input([tricky])));
+    expect(md).not.toContain("[slides here](");
+    expect(md).not.toMatch(/(^|[^\\])<img/); // an unescaped tag; "\<img" is fine
+    expect(md).not.toContain("**Sam**");
+    expect(md).toContain("\\[slides here\\]\\(https://evil.example\\)");
+    expect(md).toContain("\\<img");
+  });
+
   it("says so when there is nothing to list", () => {
     const empty = renderReportMarkdown(buildReport(input([])));
     expect(empty).toContain("_No questions._");
