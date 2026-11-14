@@ -1,0 +1,16 @@
+# Caddy terminates HTTPS (automatic Let's Encrypt certificate) and proxies to the HandUp server on localhost.
+# sslip.io resolves <ip-with-dashes>.sslip.io to that IP, so no domain purchase is needed. Replace the host with a
+# real domain if you have one. Installed to /etc/caddy/Caddyfile by scripts/deploy-vps.sh.
+{$HANDUP_HOST} {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:3000 {
+		# Server-Sent Events (/api/v1/sessions/{code}/events) must reach the browser without buffering.
+		flush_interval -1
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
