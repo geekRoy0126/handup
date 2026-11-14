@@ -8,13 +8,9 @@ import { Button } from "@/components/ui/button";
 import { FormError } from "@/components/ui/form-error";
 import { TextField } from "@/components/ui/text-field";
 import { apiFetch } from "@/lib/client/api-fetch";
+import { safeNext } from "@/lib/client/safe-next";
 
 type AuthFormProps = { mode: "login" | "register" };
-
-/** Only allow same-site relative redirects after login (no open redirects). */
-function safeNext(next: string | null): string {
-  return next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
-}
 
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();

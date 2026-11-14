@@ -13,16 +13,20 @@ export function voteLabel(votes: number): string {
 
 export function VoteButton({ question, disabled = false, onVoted }: VoteButtonProps) {
   const [optimistic, setOptimistic] = useState<{ voted: boolean; votes: number } | null>(null);
+  const [isPending, setIsPending] = useState(false);
   const voted = optimistic?.voted ?? question.hasVoted;
   const votes = optimistic?.votes ?? question.votes;
   const isOwn = question.isMine;
 
   async function toggle() {
+    // One request at a time: a double-tap would otherwise toggle twice (#40).
+    setIsPending(true);
     setOptimistic({ voted: !voted, votes: votes + (voted ? -1 : 1) });
     const result = await apiFetch<{ voted: boolean; votes: number }>(`/api/v1/questions/${question.id}/vote`, {
       method: "POST",
     });
     setOptimistic(null);
+    setIsPending(false);
     if (result.ok) onVoted();
   }
 
@@ -31,7 +35,7 @@ export function VoteButton({ question, disabled = false, onVoted }: VoteButtonPr
       <button
         type="button"
         onClick={toggle}
-        disabled={isOwn || disabled}
+        disabled={isOwn || disabled || isPending}
         aria-pressed={voted}
         aria-label={isOwn ? `Your question, ${voteLabel(votes)}` : `Upvote, ${voteLabel(votes)}`}
         className={`flex size-12 items-center justify-center rounded-lg border text-xl font-bold transition-colors focus-visible:outline-2 focus-visible:outline-brand-600 disabled:cursor-not-allowed ${
