@@ -12,6 +12,11 @@ Partly: every Sprint 1 story was coded test-first and merged, but #2 (deployment
 
 ## What went well
 
+- Writing the PRD (product rules and acceptance criteria) and AGENTS.md before any feature made the AI's work
+  consistent and let the reviewer check each PR against its ACs (both partners).
+- Every story had a failing `test(#n)` commit before `feat(#n)`; tests caught real bugs before merge, e.g. a guest
+  getting 401 instead of 403 and test tokens that would have expired in CI.
+
 ## What didn't go well
 
 - **Qingyu:** I had no GitHub activity in Sprint 1 and only started reviewing on Nov 12, so the issues I found

@@ -12,6 +12,13 @@ Partly: all Sprint 2 stories and Qingyu's 15 review-fix PRs are merged, but the 
 
 ## What went well
 
+- Partner reviews found real bugs (an open redirect, several races, a deadlock between pins and votes), and each was
+  fixed test-first in its own PR.
+- Before merging, all 17 open PRs were merged together locally and every test was run (109 unit, 110 integration,
+  36 E2E): only one trivial import conflict, and `main` never broke.
+- The app is deployed to our own VPS: every PR deploys to a preview slot and every merge to production from GitHub
+  Actions, with smoke tests against the deployed URL.
+
 ## What didn't go well
 
 ## AI-assisted development
