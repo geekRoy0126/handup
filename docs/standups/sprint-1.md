@@ -10,6 +10,25 @@ At least 3 entries per partner. Each partner writes and commits their own entry.
 - AI note: (what Antigravity did well/badly; any AGENTS.md change needed?)
 ```
 
+### 2026-11-11 — Ruoyu
+_Written retroactively on 2026-11-13._
+- Yesterday: Set up the repo, milestones and issues #1–#14 from the PRD; implemented #1 and #3–#14 test-first
+  with AI assistance and opened the stacked PRs #15, #17–#29
+- Today: Talked with Qingyu about progress and the split of work (I implemented the stories; she reviews and
+  tests)
+- Blockers: Deployment (#2) needs the Vercel and Neon accounts set up; every PR waits for Qingyu's review
+- AI note: Used Claude Code (not Antigravity) with AGENTS.md. Lessons from Nov 10 went into AGENTS.md v2.1–v2.2
+
+### 2026-11-10 — Ruoyu
+_Written retroactively on 2026-11-13._
+- Yesterday: — (sprint start)
+- Today: Scaffold, PRD, AGENTS.md v2.0 and CI (#1); then #3–#14, each with a failing `test(#n)` commit before
+  `feat(#n)`; opened PRs #15, #17–#29
+- Blockers: CI broke on a Windows-built lockfile (fixed by regenerating it on Linux); merging needs a partner
+  review
+- AI note: Claude Code wrote most of the code from my instructions. The merge E2E caught a lost-vote race and the
+  screenshot run caught duplicate guests; both became rules in AGENTS.md v2.2
+
 ### 2026-11-11 — Qingyu
 _Written retroactively on 2026-11-12 with the instructor's permission._
 - Yesterday: Accepted the repo invitation, discussed the proposal and the split of work with Ruoyu, read
