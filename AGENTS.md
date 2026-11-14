@@ -161,6 +161,16 @@ No default exports except Next special files. No `I` prefix on types. No abbrevi
 - Validate every external input with zod at the boundary: request bodies, query strings, params, form data, env.
 - Text limits come from PRD §4 (question 3–300, display name ≤ 40, title 3–80, poll option ≤ 80).
 - Writes that touch several rows (merge, pin, poll launch) run in `db.$transaction`.
+- **Check-then-write is a race.** Two requests can both pass a `findUnique` or `count` before either one writes.
+  Let the database decide:
+  - Uniqueness (email, join code, one vote): insert and catch Prisma `P2002` with `isUniqueViolation()`
+    (`src/lib/server/prisma-errors.ts`), or use `createMany({ skipDuplicates: true })`. Never `findUnique` then
+    `create` (#40, #42, #43).
+  - Limits and "only one" rules (5 questions per minute, one pinned question, one open poll): first take the lock
+    that owns the rule (`SELECT … FOR UPDATE` on the Guest row; `lockSessionForStaffWrite()` for per-session
+    rules), then count and write in the same transaction (#44, #59).
+  - Lock order: question rows before the Session row. Votes lock the question and then bump `Session.version`,
+    so never update the Session row first in a transaction that later touches questions; it deadlocks (#59).
 - Keep functions under ~40 lines and files under ~200 lines; split by responsibility.
 - Comments explain *why*. Link non-obvious decisions to their issue: `// Ties go to the older question (#6).`
 - Every TODO has an issue: `// TODO(#12): paginate`. No orphan TODOs.
@@ -200,6 +210,11 @@ No default exports except Next special files. No `I` prefix on types. No abbrevi
   so tokens signed at `TEST_NOW` would expire and break CI days later.
 - Two writes that touch the same question row (vote and merge) lock it first with `lockQuestions(tx, ids)` and
   re-read inside the transaction. Add a concurrent `Promise.all` regression test for any new write of this kind.
+- Every write covered by the check-then-write rule (§1.5) gets a concurrent test: `Promise.all` of 2–8 identical
+  requests, committed red against the racy version first. Assert status codes **and** row counts
+  (e.g. `[201, 409]` and one user), never just "no error".
+- Don't time requests to test timing-sensitive code (flaky in CI); spy on the expensive call instead, e.g. bcrypt
+  must run for an unknown email at login (#42).
 - Coverage: ≥ 80% lines, branches and functions on `src/lib/domain` (enforced in `vitest.config.mts`).
 - Commands: `npm test` (unit) · `npm run test:int` · `npm run test:e2e` · `npm run test:coverage`.
 
@@ -257,6 +272,8 @@ Never put tests and implementation in one commit. Never weaken or delete a test 
   leave at least one concrete comment (question, suggestion or confirmation of an AC), not a bare approval.
 - Merge with **"Create a merge commit" or "Rebase and merge" — never "Squash and merge"** (squashing erases the
   failing-test commits).
+- When an agent drafts review comments, each one cites `file:line` on the PR's **head commit**, and the human
+  checks every line number and claim against the code before posting (drafts were off by a line on #19–#23).
 
 ## 4. Do
 
@@ -281,6 +298,7 @@ Never put tests and implementation in one commit. Never weaken or delete a test 
 - Don't use raw hex colors, inline `style` for theming, or `dangerouslySetInnerHTML` (question text is user input).
 - Don't use `$queryRawUnsafe`/`$executeRawUnsafe`; use the Prisma query API.
 - Don't add `.skip`/`.only`, disable lint rules, or lower coverage thresholds to get CI green.
+- Don't silence a Semgrep finding without `// nosemgrep: <rule-id>` and the reason on the line above (#46).
 - Don't edit `src/generated/**` or migrations that are already on `main`.
 - Don't commit `.env`, secrets, API keys or tokens; never log passwords, JWTs or raw API keys.
 - Don't write source files with Windows PowerShell `Set-Content`/`Out-File`: they add a BOM or replace non-ASCII
@@ -290,7 +308,7 @@ Never put tests and implementation in one commit. Never weaken or delete a test 
 
 ### 6.1 Security
 
-- **JWT:** `jose` HS256, secret `JWT_SECRET` (≥ 32 chars, validated at startup). Cookies `hu_session` and
+- **JWT:** `jose` HS256, secret `JWT_SECRET` (≥ 32 chars, validated on first use by `getJwtSecret()`). Cookies `hu_session` and
   `hu_guest`: `httpOnly`, `secure` in production, `sameSite: "lax"`, `path: "/"`. Claims per PRD §3.
 - **Passwords:** `bcryptjs` cost 12. Login failure message is always "Email or password is incorrect."
 - **Authorization:** every mutating service checks the role for *that session*. A guest token from session A is
@@ -298,7 +316,15 @@ Never put tests and implementation in one commit. Never weaken or delete a test 
 - **API keys:** store only SHA-256 hash + prefix; compare hashes; other owners' sessions → 404.
 - **Abuse:** question rate limit from PRD §4.2; React escapes text — never render user input as HTML.
 - **Output:** never return `passwordHash`, emails of other users, or raw keys. Unknown errors → generic 500.
-- **Supply chain:** `npm audit --audit-level=high` must pass in CI; CodeQL and gitleaks run on every PR.
+- **Randomness:** anything that grants access (join codes, API keys, tokens) comes from `node:crypto`, never
+  `Math.random` (#43).
+- **Redirects:** after login, only same-site paths through `safeNext()`; it rejects `//`, `\` and control
+  characters, which browsers turn into another site (#40).
+- **Output outside React:** user text written into Markdown, e-mail or HTML strings is escaped by us; React only
+  escapes what it renders.
+- **Third-party assets:** a CDN `<script>` or `<link>` is pinned to an exact version **and** has an `integrity` hash.
+- **Supply chain:** `npm audit --audit-level=high`, gitleaks and Semgrep (#46) must pass on every PR. CodeQL and
+  dependency review run only while the repo is public.
 
 ### 6.2 Accessibility (WCAG 2.1 AA)
 
@@ -325,6 +351,7 @@ Never put tests and implementation in one commit. Never weaken or delete a test 
 
 | Version | Date | Author | Change | Why |
 | --- | --- | --- | --- | --- |
+| 2.3 | 2026-11-12 | Qingyu | §1.5 check-then-write rule (unique insert + `P2002`, lock then count) and lock order (questions before Session); §1.6 concurrent tests that are red first, spies instead of timing; §3.5 agent-drafted review comments; §5 Semgrep suppressions; §6.1 crypto randomness, safe redirects, escaping outside React, CDN integrity, Semgrep; JWT check is on first use, not at startup | Reviewing #15–#29 found the same race four times (registration and join-code 500s, a vote double-tap 500, a burst past the rate limit; #40, #42–#44), and locking the Session row first deadlocked with votes (#59), plus a backslash open redirect (#40), `Math.random` join codes (#43), unescaped Markdown export (#25) and CDN scripts without integrity (#26). CodeQL is skipped on the private repo, so Semgrep was added (#46) |
 | 2.2 | 2026-11-10 | Ruoyu | §1.6: wait for server-confirmed state in multi-context E2E; exact label matching; real-clock tokens in factories; lock rows for vote vs merge. §5: files are UTF-8 without BOM | Merge E2E exposed a lost-vote race (#9); the textarea locator collided with the vote button (#6); factory tokens signed at a fixed date would expire in CI; PowerShell `Set-Content` corrupted `§` in the schema and added BOMs |
 | 2.1 | 2026-11-10 | Ruoyu | Real time = SSE + `Session.version` instead of Pusher (§1.1, §1.3, §1.6); sprint dates moved to the Nov 13 deadline | No third-party secrets needed, so CI E2E and every preview can test real time; deadline is Nov 13 |
 | 2.0 | 2026-11-10 | Ruoyu | Ported HW3 v1.2 rules to HandUp: new context, architecture, naming, PRD §4 rules, visibility rules (§1.3, §5), two-context E2E rule, Pusher refetch-only payloads, single Next.js app instead of Express + Socket.IO | P2 project changed from TakeoutPick to HandUp; Vercel cannot host WebSockets and one deploy gives full-stack PR previews |
