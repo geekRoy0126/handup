@@ -47,6 +47,7 @@ CONF_DIR="$(ls -d /etc/postgresql/*/main | head -1)/conf.d"
 if [ ! -f "$CONF_DIR/handup.conf" ]; then
   # Small Postgres for a 1 GB machine.
   printf "shared_buffers = 64MB\nmax_connections = 30\nwork_mem = 2MB\n" > "$CONF_DIR/handup.conf"
+  chmod 644 "$CONF_DIR/handup.conf"   # the umask 077 above would make it unreadable for postgres
   systemctl restart postgresql
 fi
 REMOTE
