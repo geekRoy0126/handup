@@ -3,7 +3,9 @@ import "server-only";
 import { ApiError } from "@/lib/api/http";
 import { generateJoinCode } from "@/lib/domain/join-code";
 import { db } from "@/lib/server/db";
+import { isUniqueViolation } from "@/lib/server/prisma-errors";
 import { bumpSessionVersion } from "@/lib/server/realtime";
+import { secureRandom } from "@/lib/server/secure-random";
 import type { CreateSession } from "@/lib/validation/session";
 
 import type { SessionRow, StaffRole } from "./access";
@@ -23,16 +25,21 @@ const MAX_CODE_ATTEMPTS = 10;
 export async function createSession(
   input: CreateSession & { hostId: string },
   now: Date,
-  random: () => number = Math.random,
+  // The join code is the only thing that lets someone into a session, so it must not be predictable (#43).
+  random: () => number = secureRandom,
 ): Promise<SessionDto> {
   for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt += 1) {
     const code = generateJoinCode(random);
-    const taken = await db.session.findUnique({ where: { code }, select: { id: true } });
-    if (taken) continue;
-    return db.session.create({
-      data: { code, title: input.title, hostId: input.hostId, createdAt: now },
-      select: dtoSelect,
-    });
+    try {
+      return await db.session.create({
+        data: { code, title: input.title, hostId: input.hostId, createdAt: now },
+        select: dtoSelect,
+      });
+    } catch (err) {
+      // The code is taken, possibly by a create that ran at the same moment: draw again (#43).
+      if (isUniqueViolation(err)) continue;
+      throw err;
+    }
   }
   throw new ApiError("CONFLICT", "Could not find a free join code. Try again.");
 }
