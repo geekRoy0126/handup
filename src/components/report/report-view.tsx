@@ -46,7 +46,7 @@ function QuestionTable({ id, title, questions }: { id: string; title: string; qu
       ) : (
         <ol className="divide-y divide-line rounded-xl border border-line bg-surface">
           {questions.map((q, i) => (
-            <li key={`${i}-${q.body}`} className="flex gap-4 px-4 py-3">
+            <li key={i} className="flex gap-4 px-4 py-3">
               <span className="w-16 shrink-0 text-sm font-semibold tabular-nums">
                 {q.votes} {q.votes === 1 ? "vote" : "votes"}
               </span>
@@ -115,7 +115,7 @@ export function ReportView() {
                 <EmptyState title="No polls" />
               ) : (
                 state.report.polls.map((p, i) => (
-                  <div key={`${i}-${p.prompt}`} className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-4">
+                  <div key={i} className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-4">
                     <p className="font-semibold">{p.prompt}</p>
                     <PollResults results={p.results} />
                   </div>
