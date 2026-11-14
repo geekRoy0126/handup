@@ -85,6 +85,18 @@ describe("launching polls (PRD US8)", () => {
   });
 });
 
+describe("one open poll under concurrency (#59)", () => {
+  it("opens one poll when Launch is clicked twice at once; the other answers 409", async () => {
+    for (let round = 0; round < 5; round += 1) {
+      await resetDb();
+      const { code, hostToken } = await createLiveSession();
+      const responses = await Promise.all([create(code, hostToken), create(code, hostToken)]);
+      expect(responses.map((r) => r.status).sort()).toEqual([201, 409]);
+      expect((await pollsAs(code, { bearer: hostToken })).filter((p) => p.status === "OPEN")).toHaveLength(1);
+    }
+  });
+});
+
 describe("answering polls", () => {
   it("hides results from a guest until they answer, then shows them", async () => {
     const { code, hostToken } = await createLiveSession();

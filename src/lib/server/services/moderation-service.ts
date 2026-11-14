@@ -5,7 +5,7 @@ import { mergeVotes } from "@/lib/domain/merge-votes";
 import { planQuestionAction, type QuestionAction } from "@/lib/domain/question-actions";
 import { db } from "@/lib/server/db";
 import { bumpSessionVersion } from "@/lib/server/realtime";
-import { lockQuestions } from "@/lib/server/locks";
+import { lockQuestions, lockSessionForStaffWrite } from "@/lib/server/locks";
 
 type TargetQuestion = {
   id: string;
@@ -17,10 +17,17 @@ type TargetQuestion = {
 
 /** Applies a staff action (pin, answer, hide…) in one transaction and notifies live screens. */
 export async function applyQuestionAction(question: TargetQuestion, action: QuestionAction, now: Date) {
-  const result = planQuestionAction(question, action, now);
-  if (!result.ok) throw new ApiError("CONFLICT", result.reason);
-
   return db.$transaction(async (tx) => {
+    // Staff actions in one session run one at a time, and are planned from the row as it is now, not as it was
+    // before the transaction (#59). Otherwise two pins at once leave two pinned questions, and "answer" racing
+    // "pin" leaves an answered question pinned.
+    await lockSessionForStaffWrite(tx, question.session.id);
+    const current = await tx.question.findUniqueOrThrow({
+      where: { id: question.id },
+      select: { status: true, isPinned: true, isHidden: true },
+    });
+    const result = planQuestionAction(current, action, now);
+    if (!result.ok) throw new ApiError("CONFLICT", result.reason);
     if (result.unpinOthers) {
       await tx.question.updateMany({
         where: { sessionId: question.session.id, isPinned: true, id: { not: question.id } },

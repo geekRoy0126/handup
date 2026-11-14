@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { PATCH as act } from "@/app/api/v1/questions/[id]/route";
+import { POST as vote } from "@/app/api/v1/questions/[id]/vote/route";
 import { db } from "@/lib/server/db";
 import { getSessionVersion } from "@/lib/server/realtime";
 import { findSessionByCode } from "@/lib/server/services/access";
@@ -70,5 +71,44 @@ describe("PATCH /api/v1/questions/[id] — pin and answer (PRD US5)", () => {
     await actAs(first.id, "answer", { bearer: hostToken });
     expect((await actAs(first.id, "pin", { bearer: hostToken })).status).toBe(409);
     expect((await actAs(first.id, "explode", { bearer: hostToken })).status).toBe(422);
+  });
+
+  it("leaves exactly one pinned question when two staff pin different questions at once (#59)", async () => {
+    for (let round = 0; round < 5; round += 1) {
+      await resetDb();
+      const { first, second, hostToken } = await setup();
+      const responses = await Promise.all([
+        actAs(first.id, "pin", { bearer: hostToken }),
+        actAs(second.id, "pin", { bearer: hostToken }),
+      ]);
+      expect(responses.map((r) => r.status)).toEqual([200, 200]);
+      expect(await db.question.count({ where: { id: { in: [first.id, second.id] }, isPinned: true } })).toBe(1);
+    }
+  });
+
+  it("never answers 500 when a pin and votes on other questions run at the same moment (#59)", async () => {
+    for (let round = 0; round < 10; round += 1) {
+      await resetDb();
+      const { first, second, hostToken, session } = await setup();
+      const voter = await createGuest(session.code);
+      const voteOn = (id: string) =>
+        vote(jsonRequest(`/api/v1/questions/${id}/vote`, { method: "POST", cookie: voter.cookie }), ctx({ id }));
+      await actAs(second.id, "pin", { bearer: hostToken });
+      // Pinning `first` unpins `second` while votes lock `second` and then the session row.
+      const statuses = (
+        await Promise.all([actAs(first.id, "pin", { bearer: hostToken }), voteOn(second.id), voteOn(first.id)])
+      ).map((r) => r.status);
+      expect(statuses).toEqual([200, 200, 200]);
+    }
+  });
+
+  it("never ends ANSWERED and pinned when answer and pin race on one question (#59)", async () => {
+    for (let round = 0; round < 5; round += 1) {
+      await resetDb();
+      const { first, hostToken } = await setup();
+      await Promise.all([actAs(first.id, "answer", { bearer: hostToken }), actAs(first.id, "pin", { bearer: hostToken })]);
+      const after = await row(first.id);
+      expect(after.status === "ANSWERED" && after.isPinned).toBe(false);
+    }
   });
 });
