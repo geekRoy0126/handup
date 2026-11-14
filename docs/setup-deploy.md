@@ -28,8 +28,8 @@ npm run dev                       # http://localhost:3000
 | --- | --- | --- | --- |
 | Development | your laptop | Docker Postgres | `npm run dev` |
 | CI | GitHub Actions | Postgres service container (throwaway) | every PR and push to `main` |
-| Preview | Vercel preview URL per PR | Neon branch per preview (created by the Neon integration) | every push to a PR branch |
-| Production | Vercel production URL | Neon `main` branch | every merge to `main` |
+| Production | **VPS** https://136-65-108-193.sslip.io (Debian 13, systemd + Caddy) | PostgreSQL 17 on the VPS | `scripts/deploy-vps.sh` (see below) |
+| Preview (optional, not set up) | Vercel preview URL per PR | Neon branch per preview | every push to a PR branch |
 
 Variables (set in Vercel → Project → Settings → Environment Variables, separately for Preview and Production):
 
@@ -38,7 +38,30 @@ Variables (set in Vercel → Project → Settings → Environment Variables, sep
 | `DATABASE_URL`, `DATABASE_URL_UNPOOLED` | `.env` (only the first) | set by Neon integration per branch | set by Neon integration |
 | `JWT_SECRET` | `.env` | its own value | its own value (never reuse) |
 
-## One-time cloud setup (issue #2)
+## Production on the VPS (issue #2)
+
+The production app runs on a small GCP VM (2 vCPU, 1 GB RAM) next to another service, so nothing is built there.
+
+| Piece | Where |
+| --- | --- |
+| App | `/opt/handup/current` → `/opt/handup/releases/<time>-<sha>` (standalone Next.js), `handup.service` ([deploy/vps/handup.service](../deploy/vps/handup.service)): user `handup`, `MemoryMax=320M`, restart on failure |
+| HTTPS | Caddy ([deploy/vps/Caddyfile](../deploy/vps/Caddyfile)) with an automatic Let's Encrypt certificate for `136-65-108-193.sslip.io`; SSE is proxied unbuffered |
+| Database | PostgreSQL 17 on `127.0.0.1` only, `shared_buffers = 64MB`; role and database `handup` |
+| Secrets | `/etc/handup/handup.env` (root:handup 640): `DATABASE_URL`, `JWT_SECRET`, generated on the first deploy, never in git |
+| Firewall | GCP: "Allow HTTP traffic" and "Allow HTTPS traffic" on the VM (ports 80 and 443) |
+
+Deploy (from the repo root, with Docker running and SSH access to the VM):
+
+```bash
+VPS=ruoyu@136.65.108.193 SSH_KEY=~/.ssh/gcp_discord_bot bash scripts/deploy-vps.sh
+```
+
+It builds a Linux standalone bundle in Docker, runs `prisma migrate deploy` through an SSH tunnel, uploads the
+bundle as a new release, switches the `current` symlink, restarts and health-checks. **Rollback:**
+`sudo ln -sfn /opt/handup/releases/<previous> /opt/handup/current && sudo systemctl restart handup`.
+Logs: `journalctl -u handup -f`, `journalctl -u caddy -f`.
+
+## Optional: Vercel + Neon previews
 
 1. **GitHub:** push the repo, add the partner as a collaborator, run `node scripts/setup-github.mjs --partner <login>`.
 2. **Neon** (free): create project `handup`. Don't create tables by hand; migrations do it.
@@ -53,6 +76,5 @@ Variables (set in Vercel → Project → Settings → Environment Variables, sep
 
 ## Release flow
 
-PR opened → CI + security + Vercel preview (+ Neon branch) → E2E on the preview URL → partner review → merge
-(merge commit or rebase, never squash) → Vercel production deploy runs `prisma migrate deploy` → E2E smoke on
-production. Rollback: Vercel → Deployments → previous deployment → "Promote to Production".
+PR opened → CI (lint, typecheck, unit, integration, build, E2E) + security (npm audit, gitleaks, Semgrep) →
+partner review → merge (merge commit, never squash) → `scripts/deploy-vps.sh` → health check on the VPS.
