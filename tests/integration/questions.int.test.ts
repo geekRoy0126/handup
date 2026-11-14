@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { POST as join } from "@/app/api/v1/sessions/[code]/join/route";
 import { GET as listQuestions, POST as ask } from "@/app/api/v1/sessions/[code]/questions/route";
 import { ApiError } from "@/lib/api/http";
+import { db } from "@/lib/server/db";
 import { askQuestion } from "@/lib/server/services/question-service";
 import { endSession } from "@/lib/server/services/session-service";
 import { findSessionByCode } from "@/lib/server/services/access";
@@ -138,6 +139,17 @@ describe("question rate limit (PRD §4.2)", () => {
     for (let i = 0; i < 5; i += 1) await askQuestion(session, guest.guestId ?? "", input, TEST_NOW);
     const later = new Date(TEST_NOW.getTime() + 61_000);
     await expect(askQuestion(session, guest.guestId ?? "", input, later)).resolves.toMatchObject({ body: "Question?" });
+  });
+
+  it("still allows at most 5 when one guest sends 8 questions at the same moment (#44)", async () => {
+    const { code } = await createLiveSession();
+    const guest = await joinAs(code);
+    const responses = await Promise.all(
+      Array.from({ length: 8 }, (_, i) => askAs(code, guest.cookie, { body: `Burst question ${i}` })),
+    );
+    const statuses = responses.map((r) => r.status).sort();
+    expect(statuses).toEqual([201, 201, 201, 201, 201, 429, 429, 429]);
+    expect(await db.question.count({ where: { authorId: guest.guestId } })).toBe(5);
   });
 });
 
