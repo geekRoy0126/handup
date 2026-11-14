@@ -3,13 +3,17 @@
 /*
   Design tokens (see docs/ui-spec.md). Components use these semantic names, never raw hex values.
   Tailwind v4 turns each --color-* into utilities: bg-surface, text-ink-muted, bg-status-answered, ...
-  Every text/background pair below was checked at >= 4.5:1 (WCAG AA) in light mode.
+  Every text/background pair below was checked at >= 4.5:1 (WCAG AA) in light and dark mode; e2e/a11y.spec.ts runs
+  axe in both (#58).
 */
 @theme {
   --color-brand-50: #eef2ff;
   --color-brand-500: #4f5bd5;
   --color-brand-600: #3f48b8; /* white text on it: 7.0:1 */
   --color-brand-700: #323a96;
+  /* Text on a brand or danger background. Not always white: dark mode uses light brand colours (#58). */
+  --color-on-brand: #ffffff;
+  --color-on-danger: #ffffff;
 
   --color-surface: #ffffff;
   --color-surface-muted: #f5f6f8;
@@ -36,6 +40,18 @@
     --color-ink-muted: #a9adb8;
     --color-line: #2e313a;
     --color-brand-50: #1d2045;
+
+    /* Lighter accents for dark surfaces (#58). Each is >= 6:1 on --color-surface and on --color-surface-muted;
+       text on brand/danger backgrounds switches to the dark surface colour, which gives the same ratio. */
+    --color-brand-600: #8b93f0;
+    --color-brand-700: #a5abf5;
+    --color-on-brand: #121317;
+    --color-status-open: #8b93f0;
+    --color-status-pinned: #f0a24a;
+    --color-status-answered: #4cc07f;
+    --color-status-hidden: #a39e96;
+    --color-danger: #f97066;
+    --color-on-danger: #121317;
   }
 }
 
