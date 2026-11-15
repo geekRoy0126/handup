@@ -1,0 +1,129 @@
+# Automated deployment to the VPS (#2).
+#   push to main   → production  https://136-65-108-193.sslip.io
+#   pull request   → PR preview  https://preview.136-65-108-193.sslip.io (one slot: the most recently pushed PR,
+#                    with a fresh database each time)
+# Builds on the GitHub runner (the VPS has 1 GB RAM), migrates through an SSH tunnel, installs the release with
+# /usr/local/bin/handup-release (the only sudo command the `deploy` user has), then runs the @smoke E2E tests
+# against the deployed URL and records a GitHub deployment so the PR shows the link.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+  pull-requests: write
+
+concurrency:
+  # One deploy per slot at a time; a newer push to the same slot waits instead of interleaving.
+  group: deploy-${{ github.event_name == 'pull_request' && 'preview' || 'production' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ${{ github.event_name == 'pull_request' && 'PR preview' || 'production' }}
+    # Secrets are not available to PRs from forks or Dependabot, so those are not deployed.
+    if: >-
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      HANDUP_DOMAIN: 136-65-108-193.sslip.io
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - name: Pick the target
+        id: target
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "slot=preview" >> "$GITHUB_OUTPUT"
+            echo "url=https://preview.$HANDUP_DOMAIN" >> "$GITHUB_OUTPUT"
+            echo "sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "slot=production" >> "$GITHUB_OUTPUT"
+            echo "url=https://$HANDUP_DOMAIN" >> "$GITHUB_OUTPUT"
+            echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+          echo "release=${{ github.run_number }}-$(echo "${{ github.sha }}" | cut -c1-7)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Record the deployment as in progress
+        id: deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          id=$(gh api "repos/${{ github.repository }}/deployments" \
+            -f ref="${{ steps.target.outputs.sha }}" -f environment="${{ steps.target.outputs.slot }}" \
+            -F auto_merge=false -f "required_contexts[]" --jq .id 2>/dev/null || true)
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+          [ -n "$id" ] && gh api "repos/${{ github.repository }}/deployments/$id/statuses" -f state=in_progress >/dev/null || true
+
+      - name: Build the standalone bundle
+        env:
+          # Route modules are loaded while building and src/lib/server/db.ts requires a URL; nothing connects.
+          DATABASE_URL: postgresql://build:build@127.0.0.1:5432/build
+        run: |
+          HANDUP_STANDALONE=1 npm run build
+          cp -r .next/static .next/standalone/.next/static
+          cp -r public .next/standalone/public
+          tar -czf "handup-${{ steps.target.outputs.release }}.tgz" -C .next/standalone .
+
+      - name: Set up SSH
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          printf 'Host vps\n  HostName %s\n  User deploy\n  IdentityFile ~/.ssh/deploy_key\n  IdentitiesOnly yes\n' "$VPS_HOST" > ~/.ssh/config
+
+      - name: Fresh database for the preview
+        if: steps.target.outputs.slot == 'preview'
+        run: ssh vps sudo /usr/local/bin/handup-release reset-preview-db
+
+      - name: Migrate the database through an SSH tunnel
+        env:
+          DATABASE_URL: ${{ steps.target.outputs.slot == 'preview' && secrets.PREVIEW_DATABASE_URL || secrets.PROD_DATABASE_URL }}
+        run: |
+          ssh -f -N -o ExitOnForwardFailure=yes -L 15432:127.0.0.1:5432 vps
+          npx prisma migrate deploy
+
+      - name: Upload and install the release
+        run: |
+          scp -q "handup-${{ steps.target.outputs.release }}.tgz" vps:/tmp/
+          ssh vps sudo /usr/local/bin/handup-release "${{ steps.target.outputs.slot }}" \
+            "/tmp/handup-${{ steps.target.outputs.release }}.tgz" "${{ steps.target.outputs.release }}"
+
+      - name: Smoke-test the deployed app
+        env:
+          E2E_BASE_URL: ${{ steps.target.outputs.url }}
+        run: |
+          npx playwright install --with-deps chromium
+          npx playwright test --project=desktop --grep @smoke
+
+      - name: Record the deployment result
+        if: always() && steps.deployment.outputs.id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state=${{ job.status == 'success' && 'success' || 'failure' }}
+          gh api "repos/${{ github.repository }}/deployments/${{ steps.deployment.outputs.id }}/statuses" \
+            -f state="$state" -f environment_url="${{ steps.target.outputs.url }}" \
+            -f log_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >/dev/null
+
+      - name: Comment the preview link on the PR
+        if: success() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          body="**Preview deployed:** ${{ steps.target.outputs.url }} (commit ${{ github.event.pull_request.head.sha }}, smoke tests passed). The preview slot always shows the most recently pushed PR, with a fresh database."
+          gh pr comment "${{ github.event.pull_request.number }}" --edit-last --body "$body" 2>/dev/null \
+            || gh pr comment "${{ github.event.pull_request.number }}" --body "$body"

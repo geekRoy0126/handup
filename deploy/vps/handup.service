@@ -1,0 +1,27 @@
+# systemd unit for HandUp on the VPS (installed to /etc/systemd/system/handup.service by scripts/deploy-vps.sh).
+# Runs the standalone Next.js build as an unprivileged user; secrets come from /etc/handup/handup.env.
+[Unit]
+Description=HandUp (Next.js) live Q&A
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=handup
+Group=handup
+WorkingDirectory=/opt/handup/current
+EnvironmentFile=/etc/handup/handup.env
+# The server has 1 GB of RAM shared with other services: cap the heap and the whole unit.
+ExecStart=/opt/node22/bin/node --max-old-space-size=192 server.js
+MemoryMax=320M
+Restart=always
+RestartSec=3
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/handup/current/.next/cache
+
+[Install]
+WantedBy=multi-user.target

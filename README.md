@@ -7,7 +7,7 @@ was, and a report afterwards shows what the room was confused about.
 
 | | |
 | --- | --- |
-| **Live app** | _https://handup-…vercel.app — set after deployment (issue #2)_ |
+| **Live app** | https://136-65-108-193.sslip.io · PR previews: https://preview.136-65-108-193.sslip.io |
 | **API docs** | `/api-docs` (Swagger UI) · [`public/openapi.json`](public/openapi.json) · [Public API guide](docs/public-api.md) |
 | **Demo video** | _link after recording (issue #14)_ |
 | **Team** | Ruoyu Wang · Qingyu Cheng — CS6983 Project 2 |
@@ -42,8 +42,8 @@ was, and a report afterwards shows what the room was confused about.
 ## Tech stack
 
 Next.js 16 (App Router + route handlers, one deployable) · React 19 · TypeScript (strict) · Tailwind CSS 4 ·
-PostgreSQL 16 (Neon) · Prisma 7 · JWT with `jose` + bcrypt · Server-Sent Events · zod 4 ·
-Vitest + Testing Library · Playwright + axe · GitHub Actions · Vercel.
+PostgreSQL 17 · Prisma 7 · JWT with `jose` + bcrypt · Server-Sent Events · zod 4 ·
+Vitest + Testing Library · Playwright + axe · GitHub Actions · Semgrep · a Debian VPS (systemd + Caddy HTTPS).
 
 Why one Next.js app instead of the proposal's Express + Socket.IO: see [docs/architecture.md](docs/architecture.md).
 
@@ -76,8 +76,7 @@ commit (see the PRs and `git log`).
 | --- | --- | --- |
 | [`ci.yml`](.github/workflows/ci.yml) | every PR and push to `main` | lint + typecheck → unit (coverage) ∥ integration (Postgres) → build → E2E on the production build |
 | [`security.yml`](.github/workflows/security.yml) | every PR, `main`, weekly | `npm audit`, gitleaks secret scan, CodeQL, dependency review (CodeQL and dependency review need a public repo) |
-| [`e2e-deployed.yml`](.github/workflows/e2e-deployed.yml) | every Vercel deployment | Playwright `@smoke` tests against the PR preview URL and against production |
-| Vercel Git integration | every PR / merge to `main` | preview deploy per PR with its own Neon database branch · production deploy · `prisma migrate deploy` |
+| [`deploy.yml`](.github/workflows/deploy.yml) | every PR · every merge to `main` | build on the runner → `prisma migrate deploy` through an SSH tunnel → install on the VPS → Playwright `@smoke` against the deployed URL → GitHub deployment + PR comment with the link. PRs go to the preview slot (fresh database), `main` to production |
 
 ## Documentation
 

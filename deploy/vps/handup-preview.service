@@ -1,0 +1,25 @@
+# systemd unit for the PR preview slot (one preview at a time: the most recently pushed PR).
+# Same build as production, its own database (handup_preview) and secrets (/etc/handup/preview.env), port 3001.
+[Unit]
+Description=HandUp PR preview
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=handup
+Group=handup
+WorkingDirectory=/opt/handup-preview/current
+EnvironmentFile=/etc/handup/preview.env
+ExecStart=/opt/node22/bin/node --max-old-space-size=160 server.js
+MemoryMax=256M
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/handup-preview/current/.next/cache
+
+[Install]
+WantedBy=multi-user.target

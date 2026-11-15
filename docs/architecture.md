@@ -1,7 +1,7 @@
 # Architecture
 
-HandUp is one Next.js 16 application: React pages and REST route handlers deploy together to Vercel, data lives
-in PostgreSQL (Neon), and a Server-Sent Events stream tells browsers "something changed" so they refetch.
+HandUp is one Next.js 16 application: React pages and REST route handlers deploy together as one standalone server on a Debian VPS, data lives
+in PostgreSQL 17 on the same VPS, and a Server-Sent Events stream tells browsers "something changed" so they refetch.
 
 ## System context
 
@@ -13,7 +13,7 @@ flowchart LR
     D["Developer app<br/>(course site, Discord bot)"]
   end
 
-  subgraph Vercel["Vercel (preview per PR, production on main)"]
+  subgraph VPS["VPS: Caddy HTTPS → Node (production :3000, PR preview :3001)"]
     P["Pages<br/>(Client Components call /api/v1)"]
     A["Route handlers<br/>/api/v1/**"]
     PUB["Public API<br/>/api/v1/public/** (X-API-Key)"]
@@ -21,7 +21,7 @@ flowchart LR
     DOM["Domain (pure)<br/>join-code · rank-questions · merge-votes · poll-results · report"]
   end
 
-  DB[("PostgreSQL<br/>Neon: branch per preview")]
+  DB[("PostgreSQL 17 on the VPS<br/>handup · handup_preview")]
 
   G -- HTTPS --> A
   H -- HTTPS --> P
@@ -70,7 +70,7 @@ sequenceDiagram
 
 Why one app instead of Express + Socket.IO (the proposal's first plan): Vercel cannot keep WebSocket connections
 open, and a separate API host would need its own preview environments. One Next.js app gives every PR a complete
-preview (UI + API + its own Neon database branch) with no extra setup. Real time uses SSE with a version counter
+preview (UI + API + its own database) from one build. Real time uses SSE with a version counter
 in Postgres: it works across serverless instances, needs no third-party account, and events carry no data, so
 access rules stay in our services.
 
@@ -84,15 +84,13 @@ flowchart LR
   U --> B["Build"]
   I --> B
   B --> E["E2E Playwright<br/>(prod build)"]
-  PR --> SEC["Security: npm audit · gitleaks · CodeQL · dependency review"]
-  PR --> V["Vercel preview deploy<br/>+ Neon branch + migrate"]
-  V --> EP["E2E @smoke on preview URL"]
+  PR --> SEC["Security: npm audit · gitleaks · Semgrep<br/>(+ CodeQL · dependency review when public)"]
+  PR --> V["Deploy PR preview<br/>fresh DB + migrate + @smoke"]
   E --> R{"Partner review<br/>+ all checks green"}
-  EP --> R
+  V --> R
   SEC --> R
   R -->|merge| M["main"]
-  M --> PROD["Vercel production deploy<br/>migrate deploy"]
-  PROD --> ES["E2E @smoke on production"]
+  M --> PROD["Deploy production<br/>migrate + @smoke"]
 ```
 
 ## Security

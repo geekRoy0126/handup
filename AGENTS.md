@@ -54,14 +54,14 @@ plus real-time question ranking, live polls, a session report and a documented *
 | Framework | Next.js App Router (pages + API route handlers in one app), Turbopack, Cache Components on | 16.4 |
 | UI | React · Tailwind CSS (CSS-first `@theme`, no `tailwind.config.js`) | 19.3 · 4 |
 | Language | TypeScript, `strict: true` | 5 |
-| Database | PostgreSQL (Neon in cloud with a branch per preview, Docker locally) | 16 |
+| Database | PostgreSQL: on the VPS in production (separate preview database), Docker locally and in CI | 16–17 |
 | ORM | Prisma ORM with `prisma-client` generator + `@prisma/adapter-pg` | 7.10 |
 | Validation | zod | 4 |
 | Auth | Own JWT: `jose` (HS256) + `bcryptjs` | 6 · 3 |
 | Real-time | Server-Sent Events from a route handler + `Session.version` counter in Postgres (PRD §4.7) — #6 | — |
 | API docs | OpenAPI 3.1 JSON in `public/openapi.json` + Swagger UI (CDN) at `/api-docs` — #12 | — |
 | Tests | Vitest + Testing Library + jsdom · Playwright | 5 · 1.64 |
-| CI/CD | GitHub Actions · Vercel (preview per PR, production on `main`) | — |
+| CI/CD | GitHub Actions; deploy to a Debian VPS (systemd + Caddy): preview slot per PR, production on `main` (`deploy.yml`) | — |
 
 We use Next.js route handlers instead of a separate Express + Socket.IO server (the proposal's plan): one deploy
 target gives every PR a full-stack preview, and Vercel cannot host long-lived WebSockets, so real time is SSE
@@ -244,7 +244,7 @@ move is due.
 
 `<type>/<issue-number>-<short-kebab-summary>` from an up-to-date `main`.
 Types: `feature`, `fix`, `chore`, `docs`, `test`, `refactor`. Examples: `feature/6-live-upvotes`,
-`chore/2-vercel-previews`.
+`chore/2-vps-deploy`.
 
 ### 3.3 Commits
 
@@ -351,6 +351,7 @@ Never put tests and implementation in one commit. Never weaken or delete a test 
 
 | Version | Date | Author | Change | Why |
 | --- | --- | --- | --- | --- |
+| 2.4 | 2026-11-13 | Ruoyu | §1.1 stack: production and PR previews on our own VPS (systemd + Caddy) via `deploy.yml`, not Vercel + Neon; branch example | The team chose its existing VPS; CI/CD keeps per-PR previews (one slot, fresh database) and automated production deploys |
 | 2.3 | 2026-11-12 | Qingyu | §1.5 check-then-write rule (unique insert + `P2002`, lock then count) and lock order (questions before Session); §1.6 concurrent tests that are red first, spies instead of timing; §3.5 agent-drafted review comments; §5 Semgrep suppressions; §6.1 crypto randomness, safe redirects, escaping outside React, CDN integrity, Semgrep; JWT check is on first use, not at startup | Reviewing #15–#29 found the same race four times (registration and join-code 500s, a vote double-tap 500, a burst past the rate limit; #40, #42–#44), and locking the Session row first deadlocked with votes (#59), plus a backslash open redirect (#40), `Math.random` join codes (#43), unescaped Markdown export (#25) and CDN scripts without integrity (#26). CodeQL is skipped on the private repo, so Semgrep was added (#46) |
 | 2.2 | 2026-11-10 | Ruoyu | §1.6: wait for server-confirmed state in multi-context E2E; exact label matching; real-clock tokens in factories; lock rows for vote vs merge. §5: files are UTF-8 without BOM | Merge E2E exposed a lost-vote race (#9); the textarea locator collided with the vote button (#6); factory tokens signed at a fixed date would expire in CI; PowerShell `Set-Content` corrupted `§` in the schema and added BOMs |
 | 2.1 | 2026-11-10 | Ruoyu | Real time = SSE + `Session.version` instead of Pusher (§1.1, §1.3, §1.6); sprint dates moved to the Nov 13 deadline | No third-party secrets needed, so CI E2E and every preview can test real time; deadline is Nov 13 |

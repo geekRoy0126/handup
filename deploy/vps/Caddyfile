@@ -1,0 +1,30 @@
+# Caddy terminates HTTPS (automatic Let's Encrypt certificates) and proxies to HandUp on localhost.
+# sslip.io resolves <ip-with-dashes>.sslip.io (and any subdomain of it) to that IP, so no domain purchase is needed.
+# Installed to /etc/caddy/Caddyfile with {$HANDUP_HOST} replaced (scripts/deploy-vps.sh).
+(handup_common) {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
+
+# Production: main.
+{$HANDUP_HOST} {
+	import handup_common
+	reverse_proxy 127.0.0.1:3000 {
+		# Server-Sent Events (/api/v1/sessions/{code}/events) must reach the browser without buffering.
+		flush_interval -1
+	}
+}
+
+# PR preview slot: the most recently pushed pull request (.github/workflows/deploy.yml).
+preview.{$HANDUP_HOST} {
+	import handup_common
+	header X-Robots-Tag "noindex"
+	reverse_proxy 127.0.0.1:3001 {
+		flush_interval -1
+	}
+}
