@@ -24,7 +24,16 @@ Partly: every Sprint 1 story was coded test-first and merged, but #2 (deployment
   could have been. Next time I'll ask for my own stories at planning and review each PR the day it opens.
 
 ## AI-assisted development
-<!-- Where Antigravity + AGENTS.md helped, where it went wrong, which rule we added/changed (link the changelog row). -->
+
+- Ruoyu used **Claude Code** with `AGENTS.md`, not Antigravity, the course's primary harness; Qingyu wrote no code
+  in Sprint 1 (both partners' standups, `docs/ai-usage.md`).
+- **Helped:** the PRD's acceptance criteria plus the AGENTS.md rule "Scope = every AC" meant every story arrived
+  with a test per AC, and the PR template's "failing test output" section made the AI's TDD claims checkable once
+  the PRs were reviewed (Nov 12).
+- **Went wrong, and the rules that came out of it** (AGENTS.md §8, v2.1–v2.2): a Windows-built lockfile broke
+  `npm ci` in CI; test factories signed tokens at a fixed date that would have expired in CI; an E2E locator
+  matched two elements; and, found on Nov 10 while building #9 (a Sprint 2 story), the merge E2E exposed a
+  lost-vote race. Each one became a rule.
 
 ## Partner feedback
 **Ruoyu → Qingyu:**
