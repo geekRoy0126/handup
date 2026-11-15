@@ -10,6 +10,31 @@ At least 3 entries per partner. Each partner writes and commits their own entry.
 - AI note: (what Antigravity did well/badly; any AGENTS.md change needed?)
 ```
 
+### 2026-11-15 — Qingyu
+_Wrap-up after the sprint's last day, before the Nov 15 submission._
+- Yesterday (Nov 13–14): Read Ruoyu's reviews of my 15 PRs (all merged on Nov 13); talked with Ruoyu about
+  progress, merge order and deployment; prepared my demo sections and individual reflection
+- Today:
+  - Wrap-up sync with Ruoyu: went through the empty retro sections, split the demo video and set a time to record
+    it, and agreed that Ruoyu gives the instructor and TA access to the repo
+  - Reviewed and merged Ruoyu's #71, #74, #76, #73, with #71 first so `main` merged with Semgrep green
+  - Tested the deployed app (#78, PR #79): full E2E suite against the preview slot 36/36; on production `@smoke`
+    3/3 and a host + two guests walkthrough, every live update in 0.2–1.3 s
+- Blockers: Record the demo video; Ruoyu to give the instructor and TA access; fill in the remaining retro
+  sections
+- AI note: Claude Code drafted the reviews and ran the E2E suite against the deployed URLs. Its first run used a
+  stale local branch whose a11y spec lacked the dark-mode check (34 tests, not 36); I caught it and re-ran from
+  `main`
+
+### 2026-11-13 — Qingyu
+_Written retroactively on 2026-11-15._
+- Yesterday: Reviewed #15, #17–#29 and merged #15, #17–#28; opened my 15 PRs (#41, #47–#51, #53, #55, #57,
+  #64–#69)
+- Today (Nov 13–14): Read Ruoyu's reviews of my PRs as they were merged; talked with Ruoyu about progress, the
+  merge order and deployment; started preparing my demo sections and reflection
+- Blockers: Deployment (#2) still open; demo video not recorded
+- AI note: —
+
 ### 2026-11-13 — Ruoyu
 - Yesterday: Talked with Qingyu about progress while she reviewed and merged my PRs (#15, #17–#28)
 - Today: Reviewed and approved Qingyu's 15 PRs (#41, #47–#51, #53, #55, #57, #64–#69) after merging them
