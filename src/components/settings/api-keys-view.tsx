@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormError } from "@/components/ui/form-error";
 import { TextField } from "@/components/ui/text-field";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/client/api-fetch";
 import { useCurrentUser } from "@/lib/client/use-current-user";
 
@@ -87,7 +88,7 @@ export function ApiKeysView() {
             </Button>
           </div>
         )}
-        {keys === null && <div aria-label="Loading keys" className="h-32 animate-pulse rounded-xl bg-surface-muted" />}
+        {keys === null && <Skeleton label="Loading keys" className="h-32" />}
         {keys?.length === 0 && <EmptyState title="No API keys yet" body="Create one above to use the public API." />}
         {keys && keys.length > 0 && (
           <div className="overflow-x-auto rounded-xl border border-line bg-surface">

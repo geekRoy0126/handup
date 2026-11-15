@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/error-state";
 import { FormError } from "@/components/ui/form-error";
 import { TextField } from "@/components/ui/text-field";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/client/api-fetch";
 
 type Moderator = { userId: string; name: string; email: string };
@@ -52,7 +53,7 @@ export function ModeratorsPanel({ code }: { code: string }) {
         Moderators
       </h2>
       <p className="text-sm text-ink-muted">Moderators can pin, answer, hide and merge questions. They need a HandUp account.</p>
-      {list.kind === "loading" && <div aria-label="Loading moderators" className="h-10 animate-pulse rounded-lg bg-surface-muted" />}
+      {list.kind === "loading" && <Skeleton label="Loading moderators" className="h-10 rounded-lg" />}
       {list.kind === "error" && <ErrorState message={list.message} onRetry={load} />}
       {list.kind === "ready" && list.moderators.length > 0 && (
         <ul aria-label="Moderators" className="flex flex-col gap-2">

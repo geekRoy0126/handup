@@ -9,6 +9,7 @@ import { AskForm } from "@/components/questions/ask-form";
 import { QuestionList } from "@/components/questions/question-list";
 import { VoteButton } from "@/components/questions/vote-button";
 import { ErrorState } from "@/components/ui/error-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/client/api-fetch";
 import { usePolls } from "@/lib/client/use-polls";
 import { useQuestions } from "@/lib/client/use-questions";
@@ -67,7 +68,7 @@ export function GuestBoard() {
           ) : (
             <AskForm code={code} onAsked={reload} />
           )}
-          {state.kind === "loading" && <div aria-label="Loading questions" className="h-32 animate-pulse rounded-xl bg-surface-muted" />}
+          {state.kind === "loading" && <Skeleton label="Loading questions" className="h-32" />}
           {state.kind === "error" && <ErrorState message={state.message} onRetry={reload} />}
           {state.kind === "ready" && (
             <QuestionList
