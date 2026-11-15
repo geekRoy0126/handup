@@ -1,16 +1,21 @@
 # Sprint 1 retrospective (Nov 10 – Nov 11, 2026)
 
-Held on: YYYY-MM-DD · Attendees: Ruoyu Wang, Qingyu Cheng
+Held on: 2026-11-13, asynchronously in this file · Attendees: Ruoyu Wang, Qingyu Cheng
 
 ## Sprint goal met?
-<!-- yes / partly / no, one sentence -->
+Partly: every Sprint 1 story was coded test-first and merged, but #2 (deployment) is not done, so PRs had no preview deploys.
 
 ## Velocity
 | Planned points | Done points | Stories done | Stories moved to next sprint (why) |
 | --- | --- | --- | --- |
-| | | | |
+| 21 | 18 | #1, #3, #4, #5, #6, #7 | #2 Deploy (3 pts): needs the Vercel and Neon account setup |
 
 ## What went well
+
+- Writing the PRD (product rules and acceptance criteria) and AGENTS.md before any feature made the AI's work
+  consistent and let the reviewer check each PR against its ACs (both partners).
+- Every story had a failing `test(#n)` commit before `feat(#n)`; tests caught real bugs before merge, e.g. a guest
+  getting 401 instead of 403 and test tokens that would have expired in CI.
 
 ## What didn't go well
 
@@ -22,7 +27,10 @@ Held on: YYYY-MM-DD · Attendees: Ruoyu Wang, Qingyu Cheng
 <!-- Where Antigravity + AGENTS.md helped, where it went wrong, which rule we added/changed (link the changelog row). -->
 
 ## Partner feedback
-**Ruoyu → Qingyu:** <!-- one thing that helped, one thing to try next sprint -->
+**Ruoyu → Qingyu:**
+- *Helped:* Talking through progress and the split of work on Nov 10–11 settled early that I would implement and
+  you would review and test, so I could keep building without waiting.
+- *Try next:* See Sprint 2: open each fix PR as soon as the problem is found.
 
 **Qingyu → Ruoyu:**
 - *Helped:* The groundwork made it possible for me to review a codebase I hadn't written: the PRD with
@@ -34,7 +42,8 @@ Held on: YYYY-MM-DD · Attendees: Ruoyu Wang, Qingyu Cheng
   and open PRs one at a time, so reviews start on day one and the reviewer's feedback can shape the next PR.
 
 ## Action items for next sprint
-- [ ]
+- [ ] Give the second partner 1–2 stories at planning and open PRs one at a time (Qingyu)
+- [ ] Start deployment first, not last (Qingyu)
 
 ---
 
