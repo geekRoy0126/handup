@@ -3,7 +3,7 @@
 Held on: 2026-11-13, asynchronously in this file · Attendees: Ruoyu Wang, Qingyu Cheng
 
 ## Sprint goal met?
-Partly: all Sprint 2 stories and Qingyu's 15 review-fix PRs are merged, but the app is still not deployed (#2) and the demo video is not recorded.
+Partly: all Sprint 2 stories and Qingyu's 15 PRs are merged; the app was only deployed on the sprint's last day (Nov 13; #2 closed), the automated deploy workflow (PR #74) was merged on Nov 15, and the demo video is not recorded yet.
 
 ## Velocity
 | Planned points | Done points | Stories done | Stories moved to next sprint (why) |
@@ -21,8 +21,30 @@ Partly: all Sprint 2 stories and Qingyu's 15 review-fix PRs are merged, but the 
 
 ## What didn't go well
 
+- **Deployment came last.** #2 carried over from Sprint 1 and was only done on the sprint's last day (Nov 13); the
+  deploy workflow (PR #74) was merged on Nov 15, so most PRs never had a preview deploy (both).
+- **Merges piled up at the end.** 14 stacked feature PRs (#15, #17–#29), then Qingyu's 15 PRs (12 fixes, 3 docs),
+  were merged in big batches, which caused conflicts (PR #41 with PR #24 in `vote-service.ts`, and PR #66)
+  (both; Ruoyu's feedback to Qingyu).
+- **Fixes rode inside unrelated PRs without a failing-test commit first:** `fix(#9)` in PR #24 (its regression test
+  came in the same commit), `fix(#5)` in PR #28 and `fix(#1)` in PR #29 (Qingyu's feedback to Ruoyu).
+- **CI changed on its own:** Semgrep's registry rules updated and turned `main` red (#70, PR #71), because the rule
+  set isn't pinned.
+- **Docs drifted from the code** in places ("rejected on review", "checked at startup", "still not deployed");
+  review caught each one.
+
 ## AI-assisted development
-<!-- Where Antigravity + AGENTS.md helped, where it went wrong, which rule we added/changed (link the changelog row). -->
+
+- Reviews and fixes were AI-assisted (Claude Code with `AGENTS.md`). Ruoyu had it read every diff and run the
+  combined suite of all open PRs before merging them; Qingyu used it to draft review comments and the tests for
+  each fix.
+- **The AI needed checking every time:** drafted comments pointed at the wrong line; tests failed for the wrong
+  reason (PR #48, PR #69) or were too strict (PR #67); Semgrep's first findings were false positives (PR #51); one
+  E2E run on Nov 15 (after the sprint) used a stale branch.
+- **Biggest catch:** the AI's first fix for the pin race (PR #65) locked the Session row first and deadlocked with
+  votes; a concurrent test showed `[200, 200, 500]` before it was fixed with an advisory lock.
+- **Rules changed:** v2.3 (Qingyu, PR #57): check-then-write races, lock order, concurrent red-first tests,
+  agent-drafted review comments, security rules; v2.4 (Ruoyu, PR #74): VPS deployment.
 
 ## Partner feedback
 **Ruoyu → Qingyu:**
