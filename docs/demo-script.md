@@ -3,7 +3,7 @@
 Record on the **production URL** with three windows: host (laptop), guest (DevTools device mode, Pixel 7) and a
 second guest (private window). Both partners speak. Upload unlisted to YouTube and link it in the README.
 
-**Recorded:** https://youtu.be/038LhnXH4oM (unlisted, recorded together on Zoom on the production URL).
+**Recorded:** https://youtu.be/038LhnXH4oM (unlisted).
 
 | Time | Speaker | Show |
 | --- | --- | --- |
