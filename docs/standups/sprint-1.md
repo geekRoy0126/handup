@@ -38,6 +38,15 @@ _Written retroactively on 2026-11-12 with the instructor's permission._
 - Blockers: None recorded
 - AI note: — (no code written yet)
 
+### 2026-11-10 (afternoon) — Qingyu
+_Written retroactively on 2026-11-15 with the instructor's permission._
+- Yesterday: — (second check-in on Nov 10; the morning entry is below)
+- Today: Call and chat with Ruoyu on Zoom and Discord about how to record the 10-minute demo with the host and two
+  guest windows on screen; we tried sharing screens from both of us and found that the school Zoom account doesn't
+  let two participants share at the same time
+- Blockers: We need a recording setup that shows the host and both guests within that limit
+- AI note: —
+
 ### 2026-11-10 — Qingyu
 _Written retroactively on 2026-11-12 with the instructor's permission._
 - Yesterday: — (sprint start)
