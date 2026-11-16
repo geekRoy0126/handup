@@ -1,9 +1,9 @@
 # 10-minute demo video script
 
+**Recording:** https://www.youtube.com/watch?v=038LhnXH4oM (recorded on 2026-11-15)
+
 Record on the **production URL** with three windows: host (laptop), guest (DevTools device mode, Pixel 7) and a
 second guest (private window). Both partners speak. Upload unlisted to YouTube and link it in the README.
-
-**Recorded:** https://youtu.be/038LhnXH4oM (unlisted).
 
 | Time | Speaker | Show |
 | --- | --- | --- |

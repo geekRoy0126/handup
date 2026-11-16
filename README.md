@@ -9,7 +9,7 @@ was, and a report afterwards shows what the room was confused about.
 | --- | --- |
 | **Live app** | https://136-65-108-193.sslip.io · PR previews: https://preview.136-65-108-193.sslip.io |
 | **API docs** | `/api-docs` (Swagger UI) · [`public/openapi.json`](public/openapi.json) · [Public API guide](docs/public-api.md) |
-| **Demo video** | [HandUp demo on YouTube](https://youtu.be/038LhnXH4oM) (unlisted, both partners narrate; script: [`docs/demo-script.md`](docs/demo-script.md)) |
+| **Demo video** | [10-minute demo on YouTube](https://www.youtube.com/watch?v=038LhnXH4oM) |
 | **Team** | Ruoyu Wang · Qingyu Cheng — CS6983 Project 2 |
 
 [![CI](https://github.com/geekRoy0126/handup/actions/workflows/ci.yml/badge.svg)](https://github.com/geekRoy0126/handup/actions/workflows/ci.yml)
